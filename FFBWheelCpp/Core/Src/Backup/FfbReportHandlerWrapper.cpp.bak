@@ -1,0 +1,30 @@
+/*
+ * FfbReportHandlerWrapper.cpp
+ *
+ *  Created on: Sep 29, 2023
+ *      Author: Vielder
+ */
+
+#include "FfbReportHandler.h"
+#include "FfbReportHandlerWrapper.h"
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern "C" uint8_t* callFfbOnPIDBlockLoad() {
+    FfbReportHandler ffbReportHandler;
+    return ffbReportHandler.FfbOnPIDBlockLoad();
+}
+
+extern "C" void callFfbOnCreateNewEffect(USB_FFBReport_CreateNewEffect_Feature_Data_t* inData) {
+    FfbReportHandler ffbReportHandler;
+    ffbReportHandler.FfbOnCreateNewEffect(inData);
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+

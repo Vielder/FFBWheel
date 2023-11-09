@@ -1,0 +1,22 @@
+/*
+ * FfbReportHandlerWrapper.h
+ *
+ *  Created on: Sep 29, 2023
+ *      Author: Vielder
+ */
+
+#ifndef INC_FFBREPORTHANDLERWRAPPER_H_
+#define INC_FFBREPORTHANDLERWRAPPER_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+uint8_t* callFfbOnPIDBlockLoad();
+void callFfbOnCreateNewEffect(USB_FFBReport_CreateNewEffect_Feature_Data_t* inData);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* INC_FFBREPORTHANDLERWRAPPER_H_ */
