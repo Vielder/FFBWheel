@@ -111,19 +111,19 @@ __ALIGN_BEGIN static uint8_t CUSTOM_HID_ReportDesc_FS[USBD_CUSTOM_HID_REPORT_DES
 		//6 Axis for steering wheel, accelerator, brake, clutch, handbrake and spare
 		0x05, 0x01, // USAGE_PAGE (Generic Desktop)
 		0xa1, 0x00, // COLLECTION (Physical)
-		0x09, 0x30, // USAGE (X)
-		0x09, 0x31, // USAGE (Y)
 		0x09, 0x33, // USAGE (Rx)
 		0x09, 0x34, // USAGE (Ry)
+		0x09, 0x35, // USAGE (Rz)
+		0x09, 0x30, // USAGE (X)
+		0x09, 0x31, // USAGE (Y)
 		0x09, 0x32, // USAGE (Z)
-		0x09, 0x35, // USAGE (Rz) */
 		0x16, 0x00, 0x80, //LOGICAL_MINIMUM (-32768)
 		0x26, 0xFF, 0x7F, //LOGICAL_MAXIMUM (32767)
 		0x75, 0x10, // REPORT_SIZE (16)
 		0x95, 0x06, // REPORT_COUNT (6)
 		0x81, 0x02, // INPUT (Data,Var,Abs)
-		0xc0, // END_COLLECTION */
-		0xc0, // END_COLLECTION */
+		0xc0, // END_COLLECTION
+		0xc0, // END_COLLECTION
 
 		// PIDStateReport
 		0x05, 0x0F,          // USAGE_PAGE (Physical Interface)
@@ -746,6 +746,7 @@ __ALIGN_BEGIN static uint8_t CUSTOM_HID_ReportDesc_FS[USBD_CUSTOM_HID_REPORT_DES
   * @brief Public variables.
   * @{
   */
+extern USBD_HandleTypeDef hUsbDeviceFS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
 
@@ -805,8 +806,6 @@ static int8_t CUSTOM_HID_DeInit_FS(void)
 	return (USBD_OK);
   /* USER CODE END 5 */
 }
-
-
 
 /**
   * @brief  Manage the CUSTOM HID class events

@@ -31,7 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "FfbReportHandlerWrapper.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -49,6 +49,8 @@ extern "C" {
 
 /* USER CODE END EM */
 
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
@@ -63,6 +65,26 @@ typedef struct {
 	uint8_t reportId;
 	uint8_t data[64];
 } OutReportData;
+
+typedef struct {
+		uint8_t id;
+		uint32_t buttons;
+		int16_t X;
+		int16_t Y;
+		int16_t Z;
+		int16_t RX;
+		int16_t RY;
+		int16_t RZ;
+		int16_t Dial;
+		int16_t Slider;
+} reportHID_t;
+
+#define PWM_Pin GPIO_PIN_8
+#define PWM_GPIO_Port GPIOA
+#define R_EN_Pin GPIO_PIN_9
+#define R_EN_GPIO_Port GPIOB
+#define L_EN_Pin GPIO_PIN_8
+#define L_EN_GPIO_Port GPIOB
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

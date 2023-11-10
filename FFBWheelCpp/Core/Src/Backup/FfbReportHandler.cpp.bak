@@ -7,9 +7,15 @@
 
 #include "FfbReportHandler.h"
 
+
+
 FfbReportHandler::FfbReportHandler() {
   nextEID = 1;
   devicePaused = 0;
+  usedMemory = 0;
+  FreeAllEffects();
+  memset((void*)&pidBlockLoad, 0, sizeof(pidBlockLoad));
+  pidBlockLoad.ramPoolAvailable = MEMORY_SIZE;
 }
 
 FfbReportHandler::~FfbReportHandler() {
@@ -17,25 +23,14 @@ FfbReportHandler::~FfbReportHandler() {
 }
 
 
-uint8_t FfbReportHandler::GetNextFreeEffect(void)
+uint8_t FfbReportHandler::GetNextFreeEffect(uint8_t effectType)
 {
-  if (nextEID == MAX_EFFECTS)
-    return 0;
-
-  uint8_t id = nextEID++;
-
-  // Find the next free effect ID for next time
-  //nextEID=0;
-  while (gEffectStates[nextEID].state != 0)
-  {
-    if (nextEID >= MAX_EFFECTS)
-      break;  // the last spot was taken
-    nextEID++;
-  }
-
-  gEffectStates[id].state = MEFFECTSTATE_ALLOCATED;
-
-  return id;
+	for(uint8_t i=0;i<MAX_EFFECTS;i++){
+			if(gEffectStates[i].effectType == 0){
+				return(i+1);
+			}
+		}
+		return 0;
 }
 
 void FfbReportHandler::StopAllEffects(void)
@@ -154,7 +149,7 @@ void FfbReportHandler::FfbHandle_DeviceControl(USB_FFBReport_DeviceControl_Outpu
   }
 }
 
-void FfbReportHandler::FfbHandle_DeviceGain(USB_FFBReport_DeviceGain_Output_Data_t* data)
+void FfbReportHandler::FfbHandle_DeviceGain(USB_FFBReport_DeviceGain_Output_Data_Map_t* data)
 {
   deviceGain.gain = data->gain;
 }
@@ -227,30 +222,30 @@ void FfbReportHandler::SetRampForce(USB_FFBReport_SetRampForce_Output_Data_t* da
 
 void FfbReportHandler::FfbOnCreateNewEffect(USB_FFBReport_CreateNewEffect_Feature_Data_t* inData)
 {
-  pidBlockLoad.reportId = 6;
-  pidBlockLoad.effectBlockIndex = GetNextFreeEffect();
+  pidBlockLoad.reportId = HID_ID_BLKLDREP;
 
-  if (pidBlockLoad.effectBlockIndex == 0)
-  {
-    pidBlockLoad.loadStatus = 2;    // 1=Success,2=Full,3=Error
-  }
-  else
-  {
-    pidBlockLoad.loadStatus = 1;    // 1=Success,2=Full,3=Error
+  uint8_t index = GetNextFreeEffect(inData->effectType); // next effect
+	if(index == 0){
+		pidBlockLoad.loadStatus = 2;
+		return;
+	}
 
-    volatile TEffectState* effect = &gEffectStates[pidBlockLoad.effectBlockIndex];
+	volatile TEffectState* effect = &gEffectStates[index-1];
 
-    memset((void*)effect, 0, sizeof(TEffectState));
-    effect->state = MEFFECTSTATE_ALLOCATED;
-    pidBlockLoad.ramPoolAvailable -= SIZE_EFFECT;
-  }
+	memset((void*)effect, 0, sizeof(TEffectState));
+	effect->state = MEFFECTSTATE_ALLOCATED;
+	effect->effectType = inData->effectType;
+	usedMemory += SIZE_EFFECT;
+	pidBlockLoad.effectBlockIndex = index;
+	pidBlockLoad.ramPoolAvailable = MEMORY_SIZE - usedMemory;
+	pidBlockLoad.loadStatus = 1;
 }
 
 uint8_t* FfbReportHandler::FfbOnPIDPool()
 {
-  FreeAllEffects();
+//	FreeAllEffects();
 
-  pidPoolReport.reportId = 7;
+  pidPoolReport.reportId = HID_ID_POOLREP;
   pidPoolReport.ramPoolSize = MEMORY_SIZE;
   pidPoolReport.maxSimultaneousEffects = MAX_EFFECTS;
   pidPoolReport.memoryManagement = 3;
@@ -267,53 +262,56 @@ uint8_t* FfbReportHandler::FfbOnPIDStatus()
   return (uint8_t*)&pidState;
 }
 
-void FfbReportHandler::FfbOnUsbData(OutReportData *data, uint16_t len)
+void FfbReportHandler::FfbOnUsbData(uint8_t event_idx ,uint8_t* data, uint16_t len)
 {
 
-  uint8_t effectId = data->data[0]; // effectBlockIndex is always the second byte.
-  switch (data->reportId)    // reportID
+  uint8_t effectId = data[0]; // effectBlockIndex is always the second byte.
+  switch (event_idx)    // reportID
   {
-    case 1:
+    case HID_ID_EFFREP:
       FfbHandle_SetEffect((USB_FFBReport_SetEffect_Output_Data_t*)data);
       break;
-    case 2:
+    case HID_ID_ENVREP:
       SetEnvelope((USB_FFBReport_SetEnvelope_Output_Data_t*)data, &gEffectStates[effectId]);
       break;
-    case 3:
+    case HID_ID_CONDREP:
       SetCondition((USB_FFBReport_SetCondition_Output_Data_t*)data, &gEffectStates[effectId]);
       break;
-    case 4:
+    case HID_ID_PRIDREP:
       SetPeriodic((USB_FFBReport_SetPeriodic_Output_Data_t*)data, &gEffectStates[effectId]);
       break;
-    case 5:
+    case HID_ID_CONSTREP:
       SetConstantForce((USB_FFBReport_SetConstantForce_Output_Data_t*)data, &gEffectStates[effectId]);
       break;
-    case 6:
+    case HID_ID_RAMPREP:
       SetRampForce((USB_FFBReport_SetRampForce_Output_Data_t*)data, &gEffectStates[effectId]);
       break;
-    case 7:
+    case HID_ID_CSTMREP:
       FfbHandle_SetCustomForceData((USB_FFBReport_SetCustomForceData_Output_Data_t*)data);
       break;
-    case 8:
+    case HID_ID_SMPLREP:
       FfbHandle_SetDownloadForceSample((USB_FFBReport_SetDownloadForceSample_Output_Data_t*)data);
       break;
     case 9:
       break;
-    case 10:
+    case HID_ID_EFOPREP:
       FfbHandle_EffectOperation((USB_FFBReport_EffectOperation_Output_Data_t*)data);
       break;
-    case 11:
+    case HID_ID_BLKFRREP:
       FfbHandle_BlockFree((USB_FFBReport_BlockFree_Output_Data_t*)data);
       break;
-    case 12:
+    case HID_ID_CTRLREP:
       FfbHandle_DeviceControl((USB_FFBReport_DeviceControl_Output_Data_t*)data);
       break;
-    case 13:
-      FfbHandle_DeviceGain((USB_FFBReport_DeviceGain_Output_Data_t*)data);
+    case HID_ID_GAINREP:
+      FfbHandle_DeviceGain((USB_FFBReport_DeviceGain_Output_Data_Map_t*)data);
       break;
-    case 14:
+    case HID_ID_SETCREP:
       FfbHandle_SetCustomForce((USB_FFBReport_SetCustomForce_Output_Data_t*)data);
       break;
+    case HID_ID_NEWEFREP:
+    	FfbOnCreateNewEffect((USB_FFBReport_CreateNewEffect_Feature_Data_t*)data);
+			break;
     default:
       break;
   }
