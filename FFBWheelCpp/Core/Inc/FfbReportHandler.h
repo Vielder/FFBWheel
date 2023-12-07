@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <cstring>
 
+
 class FfbReportHandler {
   public:
     FfbReportHandler();
@@ -23,6 +24,9 @@ class FfbReportHandler {
     volatile TEffectState  gEffectStates[40 + 1];
     volatile uint8_t devicePaused;
     volatile uint16_t usedMemory = 0;
+    uint8_t frictionscale = 127;
+    uint8_t gain = 255;
+
     //variables for storing previous values
     volatile int32_t inertiaT = 0;
     volatile int16_t oldSpeed = 0;
@@ -63,6 +67,8 @@ class FfbReportHandler {
     uint8_t* FfbOnPIDPool();
     uint8_t* FfbOnPIDBlockLoad();
     uint8_t* FfbOnPIDStatus();
+
+    int32_t calculateEffects(int32_t pos,uint8_t axis);
 
 };
 

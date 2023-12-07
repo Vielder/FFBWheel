@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2023 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2023 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -28,6 +28,8 @@
 #include "HIDReportType.h"
 #include <chrono>
 #include "usbd_customhid.h"
+#include "helpers.h"
+#include "globals.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -82,13 +84,22 @@ const osThreadAttr_t task04_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
-reportHID_t reportHID = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+reportHID_t reportHID = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-volatile uint16_t adcResultsDMA [3];
-const int adcChannelCount = sizeof (adcResultsDMA) / sizeof (adcResultsDMA[0]);
+volatile uint16_t adcResultsDMA[3];
+const int adcChannelCount = sizeof(adcResultsDMA) / sizeof(adcResultsDMA[0]);
 volatile int adcConversionComplete = 0; // set by callback
 
-void* handler;
+uint8_t fx_ratio_i = 204; // Reduce effects to a certain ratio of the total power to have a margin for the endstop
+int32_t torque = 0; // last torque
+int32_t effectTorque = 0; // last torque
+int32_t lastEnc = 0;
+uint8_t endstop_gain_i = 128; // Sets how much extra torque per count above endstop is added. High = stiff endstop. Low = softer
+
+void *handler;
+
+int16_t debug;
+int32_t torqueTest;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,7 +120,19 @@ void StartTask04(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+int16_t updateEndstop() {
+	int8_t clipdir = cliptest<int32_t, int32_t>(lastEnc, -0x7fff, 0x7fff);
+	if (clipdir == 0) {
+		return 0;
+	}
+	int32_t addtorque = 0;
 
+	addtorque += clip<int32_t, int32_t>(abs(lastEnc) - 0x7fff, -0x7fff, 0x7fff);
+	addtorque *= (float) endstop_gain_i * 0.2f; // Apply endstop gain for stiffness
+	addtorque *= -clipdir;
+
+	return clip<int32_t, int32_t>(addtorque, -0x7fff, 0x7fff);
+}
 /* USER CODE END 0 */
 
 /**
@@ -145,7 +168,7 @@ int main(void)
   MX_I2C1_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  handler = createFfbReportHandler();
+	handler = createFfbReportHandler();
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   /* USER CODE END 2 */
 
@@ -153,19 +176,19 @@ int main(void)
   osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
+	/* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
+	/* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
+	/* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
+	/* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -182,11 +205,11 @@ int main(void)
   task04Handle = osThreadNew(StartTask04, NULL, &task04_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
+	/* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
+	/* add events, ... */
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
@@ -195,12 +218,11 @@ int main(void)
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+	while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+	}
   /* USER CODE END 3 */
 }
 
@@ -456,86 +478,127 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
-{
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
 	adcConversionComplete = 1;
 }
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartMainTask */
 /**
-  * @brief  Function implementing the mainTask thread.
-  * @param  argument: Not used
-  * @retval None
-  */
+ * @brief  Function implementing the mainTask thread.
+ * @param  argument: Not used
+ * @retval None
+ */
 /* USER CODE END Header_StartMainTask */
 void StartMainTask(void *argument)
 {
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 5 */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
+	int32_t lastTorque;
+
+	/* Infinite loop */
+	for (;;) {
+		lastTorque = torque;
+		torque = 0;
+		lastEnc = reportHID.X;
+
+		effectTorque = callCalculateEffects(handler, reportHID.X, 1);
+
+		if (abs(effectTorque) >= 1919) {
+			//clipped
+		}
+		// Scale for power and endstop margin
+		float effect_margin_scaler = ((float) fx_ratio_i / 255.0);
+		effectTorque *= ((float) MAX_TORQUE / (float) 0x7fff) * effect_margin_scaler;
+
+		// Always check if endstop reached
+		int32_t endstopTorque = updateEndstop();
+
+		// Calculate total torque
+		torque += effectTorque + endstopTorque;
+
+		// Torque changed
+		if (torque != lastTorque) {
+			// Update torque and clip
+			torque = clip<int32_t, int32_t>(torque, -MAX_TORQUE, MAX_TORQUE);
+			if (abs(torque) == MAX_TORQUE) {
+				//clipped
+			}
+			// Send to motor driver
+			//TODO turn motor
+			if (torque < 0) {
+				HAL_GPIO_WritePin(R_EN_GPIO_Port, R_EN_Pin, GPIO_PIN_RESET); // Установка R_EN на низкий уровень
+				HAL_GPIO_WritePin(L_EN_GPIO_Port, L_EN_Pin, GPIO_PIN_SET); // Установка L_EN на высокий уровень
+			} else {
+				HAL_GPIO_WritePin(R_EN_GPIO_Port, R_EN_Pin, GPIO_PIN_SET); // Установка R_EN на высокий уровень
+				HAL_GPIO_WritePin(L_EN_GPIO_Port, L_EN_Pin, GPIO_PIN_RESET); // Установка L_EN на низкий уровень
+			}
+			int32_t val = (uint32_t) abs(torque)+500;
+			torqueTest = torque;
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, val);
+		}
+		osDelay(1);
+	}
   /* USER CODE END 5 */
 }
 
 /* USER CODE BEGIN Header_StartTask02 */
 /**
-* @brief Function implementing the task02 thread.
-* @param argument: Not used
-* @retval None
-*/
+ * @brief Function implementing the task02 thread.
+ * @param argument: Not used
+ * @retval None
+ */
 /* USER CODE END Header_StartTask02 */
 void StartTask02(void *argument)
 {
   /* USER CODE BEGIN StartTask02 */
-HAL_StatusTypeDef ret;
-	uint8_t raw[2] = {0,0};
+	HAL_StatusTypeDef ret;
+	uint8_t raw[2] = { 0, 0 };
 	int16_t prevPos = 0;
 	int16_t temp;
-	int rdCnt=0;
+	int rdCnt = 0;
 
 	static const uint8_t H_ADDR = 0x36 << 1;
 	static uint8_t H_DATA = 0x0C;
 
 	ret = HAL_I2C_Master_Transmit(&hi2c1, H_ADDR, &H_DATA, 1, HAL_MAX_DELAY);
-	if(ret!=HAL_OK){
+	if (ret != HAL_OK) {
 	}
 	ret = HAL_I2C_Master_Receive(&hi2c1, H_ADDR, raw, 2, HAL_MAX_DELAY);
-	if(ret!=HAL_OK){
+	if (ret != HAL_OK) {
 	}
-	prevPos = raw[1] | (raw[0]<<8);
+	prevPos = raw[1] | (raw[0] << 8);
 
 	/* Infinite loop */
-	for(;;)
-	{
+	for (;;) {
 		ret = HAL_I2C_Master_Transmit(&hi2c1, H_ADDR, &H_DATA, 1, HAL_MAX_DELAY);
-		if(ret!=HAL_OK){
+		if (ret != HAL_OK) {
 			continue;
 		}
 		ret = HAL_I2C_Master_Receive(&hi2c1, H_ADDR, raw, 2, HAL_MAX_DELAY);
-		if(ret!=HAL_OK){
+		if (ret != HAL_OK) {
 			continue;
 		}
-		temp = raw[1] | (raw[0]<<8);
+		temp = raw[1] | (raw[0] << 8);
 
-		if (prevPos > 2596 && prevPos <= 4096 && temp >= 0 && temp <= 1596){
+		if (prevPos > 2596 && prevPos <= 4096 && temp >= 0 && temp <= 1596) {
 			rdCnt++;
-		} else if(temp > 2596 && temp <= 4096 && prevPos >= 0 && prevPos <= 1596){
+		} else if (temp > 2596 && temp <= 4096 && prevPos >= 0 && prevPos <= 1596) {
 			rdCnt--;
 		}
-		if (temp+4096*rdCnt < reportHID.X+2 && temp+4096*rdCnt > reportHID.X-2){
+		if (temp + 4096 * rdCnt < reportHID.X + 3
+				&& temp + 4096 * rdCnt > reportHID.X - 3) {
 
-		} else{
-			reportHID.X = temp+rdCnt*4096;
+		} else {
+			reportHID.X = -(temp + rdCnt * 4096);
 		}
 		prevPos = temp;
+		debug = rdCnt;
 
 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-		USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*)&reportHID, sizeof(reportHID_t));
+		USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*) &reportHID,
+				sizeof(reportHID_t));
 		osDelay(1);
 	}
   /* USER CODE END StartTask02 */
@@ -543,35 +606,31 @@ HAL_StatusTypeDef ret;
 
 /* USER CODE BEGIN Header_StartTask03 */
 /**
-* @brief Function implementing the task03 thread.
-* @param argument: Not used
-* @retval None
-*/
+ * @brief Function implementing the task03 thread.
+ * @param argument: Not used
+ * @retval None
+ */
 /* USER CODE END Header_StartTask03 */
 void StartTask03(void *argument)
 {
   /* USER CODE BEGIN StartTask03 */
-  /* Infinite loop */
-	for(;;)
-	{
+	/* Infinite loop */
+	for (;;) {
 
 		if (reportHID.X < -6144) {
-			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 1000 + (2^(-6144 - reportHID.X)));
-			HAL_GPIO_WritePin(R_EN_GPIO_Port, R_EN_Pin, GPIO_PIN_SET); // Установка R_EN на высокий уровень
-			HAL_GPIO_WritePin(L_EN_GPIO_Port, L_EN_Pin, GPIO_PIN_RESET); // Установка L_EN на низкий уровень
-		}
-		else if (reportHID.X > 6144){
-			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 1000 + (2^(reportHID.X - 6144)));
-			HAL_GPIO_WritePin(R_EN_GPIO_Port, R_EN_Pin, GPIO_PIN_RESET); // Установка R_EN на низкий уровень
-			HAL_GPIO_WritePin(L_EN_GPIO_Port, L_EN_Pin, GPIO_PIN_SET); // Установка L_EN на высокий уровень
-		}
-		else if (reportHID.X > -10 && reportHID.X < 10){
-			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 1919);
-			HAL_GPIO_WritePin(R_EN_GPIO_Port, R_EN_Pin, GPIO_PIN_RESET); // Установка R_EN на низкий уровень
-			HAL_GPIO_WritePin(L_EN_GPIO_Port, L_EN_Pin, GPIO_PIN_RESET); // Установка L_EN на низкий уровень
-		}
-		else {
+//			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (-6144 - reportHID.X));
+//			HAL_GPIO_WritePin(R_EN_GPIO_Port, R_EN_Pin, GPIO_PIN_SET); // Установка R_EN на высокий уровень
+//			HAL_GPIO_WritePin(L_EN_GPIO_Port, L_EN_Pin, GPIO_PIN_RESET); // Установка L_EN на низкий уровень
+		} else if (reportHID.X > 6144) {
+//			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (reportHID.X - 6144));
+//			HAL_GPIO_WritePin(R_EN_GPIO_Port, R_EN_Pin, GPIO_PIN_RESET); // Установка R_EN на низкий уровень
+//			HAL_GPIO_WritePin(L_EN_GPIO_Port, L_EN_Pin, GPIO_PIN_SET); // Установка L_EN на высокий уровень
+		} else if (reportHID.X > -10 && reportHID.X < 10) {
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+			HAL_GPIO_WritePin(R_EN_GPIO_Port, R_EN_Pin, GPIO_PIN_RESET); // Установка R_EN на низкий уровень
+			HAL_GPIO_WritePin(L_EN_GPIO_Port, L_EN_Pin, GPIO_PIN_RESET); // Установка L_EN на низкий уровень
+		} else {
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 1919);
 			HAL_GPIO_WritePin(R_EN_GPIO_Port, R_EN_Pin, GPIO_PIN_RESET); // Установка R_EN на низкий уровень
 			HAL_GPIO_WritePin(L_EN_GPIO_Port, L_EN_Pin, GPIO_PIN_RESET); // Установка L_EN на низкий уровень
 		}
@@ -582,19 +641,18 @@ void StartTask03(void *argument)
 
 /* USER CODE BEGIN Header_StartTask04 */
 /**
-* @brief Function implementing the task04 thread.
-* @param argument: Not used
-* @retval None
-*/
+ * @brief Function implementing the task04 thread.
+ * @param argument: Not used
+ * @retval None
+ */
 /* USER CODE END Header_StartTask04 */
 void StartTask04(void *argument)
 {
   /* USER CODE BEGIN StartTask04 */
-  /* Infinite loop */
-	for(;;)
-	{
-		HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcResultsDMA, adcChannelCount);
-		while(adcConversionComplete == 0){
+	/* Infinite loop */
+	for (;;) {
+		HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adcResultsDMA, adcChannelCount);
+		while (adcConversionComplete == 0) {
 
 		}
 		adcConversionComplete = 0;
@@ -613,11 +671,10 @@ void StartTask04(void *argument)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
+	/* User can add his own implementation to report the HAL error return state */
+	__disable_irq();
+	while (1) {
+	}
   /* USER CODE END Error_Handler_Debug */
 }
 

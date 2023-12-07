@@ -33,6 +33,10 @@ extern "C" void callFfbOnUsbData(void* handler, uint8_t event_idx, uint8_t* data
 	static_cast<FfbReportHandler*>(handler)->FfbOnUsbData(event_idx, data, len);
 }
 
+extern "C" int32_t callCalculateEffects(void *handler, int32_t pos, uint8_t axis) {
+	return static_cast<FfbReportHandler*>(handler)->calculateEffects(pos, axis);
+}
+
 #ifdef __cplusplus
 }
 #endif

@@ -31,6 +31,7 @@ FREERTOS.FootprintOK=true
 FREERTOS.IPParameters=Tasks01,FootprintOK
 FREERTOS.Tasks01=mainTask,24,128,StartMainTask,Default,NULL,Dynamic,NULL,NULL;task02,24,128,StartTask02,Default,NULL,Dynamic,NULL,NULL;task03,24,128,StartTask03,Default,NULL,Dynamic,NULL,NULL;task04,24,128,StartTask04,Default,NULL,Dynamic,NULL,NULL
 File.Version=6
+GPIO.groupedBy=Group By Peripherals
 KeepUserPlacement=false
 Mcu.CPN=STM32F103C8T6
 Mcu.Family=STM32F1
