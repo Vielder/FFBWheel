@@ -21,11 +21,12 @@ class FfbReportHandler {
     ~FfbReportHandler();
     // Effect management
     volatile uint8_t nextEID;  // FFP effect indexes starts from 1
-    volatile TEffectState  gEffectStates[40 + 1];
+    volatile TEffectState  gEffectStates[20 + 1];
     volatile uint8_t devicePaused;
     volatile uint16_t usedMemory = 0;
     uint8_t frictionscale = 127;
-    uint8_t gain = 255;
+    uint8_t gain = 1;
+    bool ffb_active = false;
 
     //variables for storing previous values
     volatile int32_t inertiaT = 0;
@@ -35,6 +36,8 @@ class FfbReportHandler {
     volatile USB_FFBReport_PIDBlockLoad_Feature_Data_t pidBlockLoad;
     volatile USB_FFBReport_PIDPool_Feature_Data_t pidPoolReport;
     volatile USB_FFBReport_DeviceGain_Output_Data_t deviceGain;
+
+
 
 
 
@@ -60,6 +63,8 @@ class FfbReportHandler {
     void SetPeriodic(USB_FFBReport_SetPeriodic_Output_Data_t* data, volatile TEffectState* effect);
     void SetConstantForce(USB_FFBReport_SetConstantForce_Output_Data_t* data, volatile TEffectState* effect);
     void SetRampForce(USB_FFBReport_SetRampForce_Output_Data_t* data, volatile TEffectState* effect);
+
+    void sendStatusReport(uint8_t effect);
 
     // Handle incoming data from USB
     void FfbOnCreateNewEffect(USB_FFBReport_CreateNewEffect_Feature_Data_t* inData);

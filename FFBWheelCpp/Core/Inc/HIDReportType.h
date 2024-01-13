@@ -11,7 +11,7 @@
 #include <sys/_stdint.h>
 
 // Maximum number of parallel effects in memory
-#define MAX_EFFECTS     40
+#define MAX_EFFECTS     28
 #define SIZE_EFFECT     sizeof(TEffectState)
 #define MEMORY_SIZE     (uint16_t)(MAX_EFFECTS*SIZE_EFFECT)
 #define TO_LT_END_16(x)    ((x<<8)&0xFF00)|((x>>8)&0x00FF)
@@ -39,6 +39,13 @@
 #define HID_ID_BLKLDREP	0x12	// Usage Block Load Report
 #define HID_ID_POOLREP	0x13	// Usage PID Pool Report
 
+#define HID_ACTUATOR_POWER 		0x08
+#define HID_SAFETY_SWITCH 		0x04
+#define HID_ENABLE_ACTUATORS 	0x02
+#define HID_EFFECT_PAUSE		0x01
+#define HID_ENABLE_ACTUATORS_MASK 0xFD
+#define HID_EFFECT_PLAYING 		0x10
+
 #include <stdint.h>
 
 // ---- Input
@@ -51,12 +58,6 @@ typedef struct { //WheelReport
 		int16_t ryAxis;
 		int16_t rzAxis;
 } USB_FFBReport_WheelReport_Input_Data_t;
-
-typedef struct { //PID State
-		uint8_t reportId;	// =2
-		uint8_t status;	// Bits: 0=Device Paused,1=Actuators Enabled,2=Safety Switch,3=Actuator Override Switch,4=Actuator Power
-		uint8_t effectBlockIndex;	// Bit7=Effect Playing, Bit0..7=EffectId (1..40)
-} USB_FFBReport_PIDStatus_Input_Data_t;
 
 // ---- Output
 typedef struct { // FFB: Set Effect Output Report
@@ -247,6 +248,12 @@ typedef struct {
 		uint64_t startTime = 0;
 
 } TEffectState;
+
+typedef struct { //PID State
+		uint8_t reportId = HID_ID_STATE;
+		uint8_t status;	// Bits: 0=Device Paused,1=Actuators Enabled,2=Safety Switch,3=Actuator Override Switch,4=Actuator Power
+		uint8_t effectBlockIndex;	// Bit7=Effect Playing, Bit0..7=EffectId (1..40)
+} USB_FFBReport_PIDStatus_Input_Data_t;
 
 #endif //c++
 

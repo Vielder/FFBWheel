@@ -7,8 +7,11 @@
 
 #define NOMINMAX
 #include "FfbReportHandler.h"
+#include "FfbWheel.h"
 #include "math.h"
 #include "helpers.h"
+#include "usbd_customhid.h"
+
 
 FfbReportHandler::FfbReportHandler() {
 	nextEID = 1;
@@ -25,7 +28,7 @@ FfbReportHandler::~FfbReportHandler() {
 
 uint8_t FfbReportHandler::GetNextFreeEffect(uint8_t effectType) {
 	for (uint8_t i = 0; i < MAX_EFFECTS; i++) {
-		if (gEffectStates[i].effectType == FFB_EFFECT_NONE) {
+		if (gEffectStates[i].effectType == FFB_EFFECT_NONE || gEffectStates[i].effectType == effectType) {
 			return (i + 1);
 		}
 	}
@@ -48,7 +51,7 @@ void FfbReportHandler::StartEffect(uint8_t id) {
 void FfbReportHandler::StopEffect(uint8_t id) {
 	if (id > MAX_EFFECTS)
 		return;
-	gEffectStates[id].state &= ~MEFFECTSTATE_PLAYING;
+	gEffectStates[id].state = MEFFECTSTATE_ALLOCATED;
 	pidBlockLoad.ramPoolAvailable += SIZE_EFFECT;
 
 }
@@ -71,28 +74,28 @@ void FfbReportHandler::FfbHandle_EffectOperation(
 		USB_FFBReport_EffectOperation_Output_Data_t *data) {
 	if (data->operation == 1) { // Start
 		if (data->loopCount > 0)
-			gEffectStates[data->effectBlockIndex].duration *= data->loopCount;
+			gEffectStates[data->effectBlockIndex-1].duration *= data->loopCount;
 		if (data->loopCount == 0xFF)
-			gEffectStates[data->effectBlockIndex].duration = USB_DURATION_INFINITE;
-		StartEffect(data->effectBlockIndex);
+			gEffectStates[data->effectBlockIndex-1].duration = USB_DURATION_INFINITE;
+		StartEffect(data->effectBlockIndex-1);
 	} else if (data->operation == 2) { // StartSolo
 
 		// Stop all first
 		StopAllEffects();
 
 		// Then start the given effect
-		StartEffect(data->effectBlockIndex);
+		StartEffect(data->effectBlockIndex-1);
 
 	} else if (data->operation == 3) { // Stop
 
-		StopEffect(data->effectBlockIndex);
+		StopEffect(data->effectBlockIndex-1);
 	} else {
 	}
 }
 
 void FfbReportHandler::FfbHandle_BlockFree(
 		USB_FFBReport_BlockFree_Output_Data_t *data) {
-	uint8_t eid = data->effectBlockIndex;
+	uint8_t eid = data->effectBlockIndex-1;
 
 	if (eid == 0xFF) { // all effects
 		FreeAllEffects();
@@ -106,19 +109,26 @@ void FfbReportHandler::FfbHandle_DeviceControl(
 
 	uint8_t control = data->control;
 
-	if (control == 0x01) { // 1=Enable Actuators
+	if (control & 0x01) { // 1=Enable Actuators
 		pidState.status |= 2;
-	} else if (control == 0x02) { // 2=Disable Actuators
+		ffb_active = true;
+	} else if (control & 0x02) { // 2=Disable Actuators
 		pidState.status &= ~(0x02);
-	} else if (control == 0x03) { // 3=Stop All Effects
+		ffb_active = false;
+	} else if (control & 0x04) { // 4=Stop
+		pidState.status &= ~(0x02);
+		ffb_active = false;
+	} else if (control & 0x03) { // 3=Stop All Effects
 		StopAllEffects();
-	} else if (control == 0x04) { //  4=Reset
+		ffb_active = false;
+	} else if (control & 0x08) { //  4=Reset
 		FreeAllEffects();
-	} else if (control == 0x05) { // 5=Pause
-		devicePaused = 1;
-	} else if (control == 0x06) { // 6=Continue
-		devicePaused = 0;
-	} else if (control & (0xFF - 0x3F)) {
+	} else if (control & 0x10) { // 5=Pause
+		pidState.status &= ~(0x02);
+		ffb_active = false;
+	} else if (control & 0x20) { // 6=Continue
+		pidState.status |= 2;
+		ffb_active = false;
 	}
 }
 
@@ -142,6 +152,10 @@ void FfbReportHandler::FfbHandle_SetDownloadForceSample(
 void FfbReportHandler::FfbHandle_SetEffect(
 		USB_FFBReport_SetEffect_Output_Data_t *data) {
 	uint8_t index = data->effectBlockIndex;
+	if(index > MAX_EFFECTS || index == 0){
+			return;
+	}
+
 	volatile TEffectState *effect = &gEffectStates[index-1];
 
 	effect->duration = data->duration;
@@ -160,11 +174,7 @@ void FfbReportHandler::FfbHandle_SetEffect(
 	if (effect->effectType != data->effectType) {
 		effect->counter = 0;
 		effect->last_value = 0;
-//		effect->last_value = 0;
 	}
-	//  effect->triggerRepeatInterval;
-	//  effect->samplePeriod;   // 0..32767 ms
-	//  effect->triggerButton;
 }
 
 void FfbReportHandler::SetEnvelope(
@@ -213,20 +223,23 @@ void FfbReportHandler::SetRampForce(
 
 void FfbReportHandler::FfbOnCreateNewEffect(
 		USB_FFBReport_CreateNewEffect_Feature_Data_t *inData) {
-	pidBlockLoad.reportId = HID_ID_BLKLDREP;
 
 	uint8_t index = GetNextFreeEffect(inData->effectType); // next effect
 	if (index == 0) {
 		pidBlockLoad.loadStatus = 2;
 		return;
 	}
+	//printf("Creating Effect: %d at %d\n",effect->effectType,index);
 
 	volatile TEffectState *effect = &gEffectStates[index - 1];
 
 	memset((void*) effect, 0, sizeof(TEffectState));
 	effect->state = MEFFECTSTATE_ALLOCATED;
 	effect->effectType = inData->effectType;
+
+	pidBlockLoad.reportId = HID_ID_BLKLDREP;
 	usedMemory += SIZE_EFFECT;
+	pidState.effectBlockIndex = index;
 	pidBlockLoad.effectBlockIndex = index;
 	pidBlockLoad.ramPoolAvailable = MEMORY_SIZE - usedMemory;
 	pidBlockLoad.loadStatus = 1;
@@ -244,10 +257,30 @@ uint8_t* FfbReportHandler::FfbOnPIDPool() {
 
 uint8_t* FfbReportHandler::FfbOnPIDBlockLoad() {
 	return (uint8_t*) &pidBlockLoad;
+	USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*)&pidBlockLoad, sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
 }
 
 uint8_t* FfbReportHandler::FfbOnPIDStatus() {
 	return (uint8_t*) &pidState;
+	USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*)&pidState, sizeof(USB_FFBReport_PIDStatus_Input_Data_t));
+}
+
+/*
+ * Sends a status report for a specific effect
+ */
+void FfbReportHandler::sendStatusReport(uint8_t effect){
+	pidState.effectBlockIndex = effect;
+	pidState.status = HID_ACTUATOR_POWER;
+	if(ffb_active){
+		pidState.status |= HID_ENABLE_ACTUATORS;
+		pidState.status |= HID_EFFECT_PLAYING;
+	}else{
+		pidState.status |= HID_EFFECT_PAUSE;
+	}
+	if(effect > 0 && gEffectStates[effect-1].state == 1)
+		pidState.status |= HID_EFFECT_PLAYING;
+	//printf("Status: %d\n",reportFFBStatus.status);
+	USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*)&pidState, sizeof(USB_FFBReport_PIDStatus_Input_Data_t));
 }
 
 void FfbReportHandler::FfbOnUsbData(uint8_t event_idx, uint8_t *data,
@@ -299,6 +332,7 @@ void FfbReportHandler::FfbOnUsbData(uint8_t event_idx, uint8_t *data,
 		case HID_ID_CTRLREP:
 			FfbHandle_DeviceControl(
 					(USB_FFBReport_DeviceControl_Output_Data_t*) data);
+			sendStatusReport(effectId);
 			break;
 		case HID_ID_GAINREP:
 			FfbHandle_DeviceGain((USB_FFBReport_DeviceGain_Output_Data_Map_t*) data);
@@ -335,7 +369,7 @@ int32_t FfbReportHandler::calculateEffects(int32_t pos, uint8_t axis = 1) {
 	for (uint8_t i = 0; i < MAX_EFFECTS; i++) {
 		volatile TEffectState *effect = &gEffectStates[i];
 		// Filter out inactive effects
-		if (effect->state == 0 || !(axis & effect->axis))
+		if (effect->state != 2)
 			continue;
 
 		switch (effect->effectType) {
