@@ -508,7 +508,7 @@ void StartDefaultTask(void *argument) {
 			}
 			int32_t val = (uint32_t) abs(torque) + 600;
 			torqueTest = torque;
-//			printf("%ld", torque);
+			printf("%ld", torque);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, val);
 		}
 		osDelay(1);
