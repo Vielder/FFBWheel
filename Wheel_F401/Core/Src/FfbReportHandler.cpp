@@ -246,8 +246,7 @@ void FfbReportHandler::FfbOnCreateNewEffect(
 }
 
 uint8_t* FfbReportHandler::FfbOnPIDPool() {
-//	FreeAllEffects();
-
+  FreeAllEffects();
 	pidPoolReport.reportId = HID_ID_POOLREP;
 	pidPoolReport.ramPoolSize = MEMORY_SIZE;
 	pidPoolReport.maxSimultaneousEffects = MAX_EFFECTS;
@@ -287,6 +286,7 @@ void FfbReportHandler::FfbOnUsbData(uint8_t event_idx, uint8_t *data,
 		uint16_t len) {
 
 	uint8_t effectId = data[0]-1; // effectBlockIndex-1
+	printf("OutReport:\tID:%d;\tData:%p\n", event_idx, data);
 	switch (event_idx)    // reportID
 	{
 		case HID_ID_EFFREP:

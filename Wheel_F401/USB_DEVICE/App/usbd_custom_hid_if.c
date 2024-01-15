@@ -852,7 +852,7 @@ static int8_t CUSTOM_HID_GetEvent_FS(USBD_SetupReqTypedef* req,uint8_t** return_
 //  USBD_GetEvent_HID((req->wValue & 0xff),req->wLength,return_buf);
 
   uint8_t event_idx = (req->wValue & 0xff) - FFB_ID_OFFSET;
-
+  printf("GetReport:\tID:%d\n",event_idx);
 	switch(event_idx){
 	case HID_ID_BLKLDREP:
 		//printf("Get Block Report\n");

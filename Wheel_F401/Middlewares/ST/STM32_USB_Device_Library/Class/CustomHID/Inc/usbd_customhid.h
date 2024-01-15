@@ -86,6 +86,8 @@ extern "C" {
 
 #define CUSTOM_HID_REQ_SET_REPORT                    0x09U
 #define CUSTOM_HID_REQ_GET_REPORT                    0x01U
+
+#define USBD_CUSTOMHID_CTRL_REQ_GET_REPORT_ENABLED	 0x01U
 /**
   * @}
   */
@@ -107,12 +109,6 @@ typedef struct _USBD_CUSTOM_HID_Itf
   int8_t (* DeInit)(void);
   int8_t (* OutEvent)(uint8_t event_idx, uint8_t* state);
   int8_t (* GetEvent)      (USBD_SetupReqTypedef*,uint8_t** return_buf); //feature get
-#ifdef USBD_CUSTOMHID_CTRL_REQ_COMPLETE_CALLBACK_ENABLED
-  int8_t (* CtrlReqComplete)(uint8_t request, uint16_t wLength);
-#endif /* USBD_CUSTOMHID_CTRL_REQ_COMPLETE_CALLBACK_ENABLED */
-#ifdef USBD_CUSTOMHID_CTRL_REQ_GET_REPORT_ENABLED
-  uint8_t *(* GetReport)(uint16_t *ReportLength);
-#endif /* USBD_CUSTOMHID_CTRL_REQ_GET_REPORT_ENABLED */
 } USBD_CUSTOM_HID_ItfTypeDef;
 
 typedef struct

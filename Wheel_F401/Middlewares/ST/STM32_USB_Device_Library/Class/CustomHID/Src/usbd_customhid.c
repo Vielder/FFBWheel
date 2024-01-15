@@ -355,7 +355,8 @@ static uint8_t USBD_CUSTOM_HID_Setup(USBD_HandleTypeDef *pdev,
   USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef *)pdev->pClassDataCmsit[pdev->classId];
   uint16_t len = 0U;
 #ifdef USBD_CUSTOMHID_CTRL_REQ_GET_REPORT_ENABLED
-  uint16_t ReportLength = 0U;
+  uint8_t* get_feature_return_buf;
+	get_feature_return_buf = (uint8_t*)malloc(sizeof(USB_FFBReport_PIDPool_Feature_Data_t));
 #endif /* USBD_CUSTOMHID_CTRL_REQ_GET_REPORT_ENABLED */
   uint8_t  *pbuf = NULL;
   uint16_t status_info = 0U;
@@ -402,45 +403,17 @@ static uint8_t USBD_CUSTOM_HID_Setup(USBD_HandleTypeDef *pdev,
                                   MIN(req->wLength, USBD_CUSTOMHID_OUTREPORT_BUF_SIZE));
 #endif /* USBD_CUSTOMHID_EP0_OUT_PREPARE_RECEIVE_DISABLED */
           break;
-#ifdef USBD_CUSTOMHID_CTRL_REQ_GET_REPORT_ENABLED
         case CUSTOM_HID_REQ_GET_REPORT:
-          if (((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData[pdev->classId])->GetReport != NULL)
-          {
-            ReportLength = req->wLength;
-
-            /* Get report data buffer */
-            pbuf = ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData[pdev->classId])->GetReport(&ReportLength);
-          }
-
-          if ((pbuf != NULL) && (ReportLength != 0U))
-          {
-            len = MIN(ReportLength, req->wLength);
-
-            /* Send the report data over EP0 */
-            (void)USBD_CtlSendData(pdev, pbuf, len);
-          }
-          else
-          {
-#ifdef USBD_CUSTOMHID_CTRL_REQ_COMPLETE_CALLBACK_ENABLED
-            if (((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData[pdev->classId])->CtrlReqComplete != NULL)
-            {
-              /* Let the application decide what to do, keep EP0 data phase in NAK state and
-                 use USBD_CtlSendData() when data become available or stall the EP0 data phase */
-              ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData[pdev->classId])->CtrlReqComplete(req->bRequest,
-                                                                                              req->wLength);
-            }
-            else
-            {
-              /* Stall EP0 if no data available */
-              USBD_CtlError(pdev, req);
-            }
-#else
-            /* Stall EP0 if no data available */
-            USBD_CtlError(pdev, req);
-#endif /* USBD_CUSTOMHID_CTRL_REQ_COMPLETE_CALLBACK_ENABLED */
-          }
-          break;
-#endif /* USBD_CUSTOMHID_CTRL_REQ_GET_REPORT_ENABLED */
+					get_feature_return_buf = 0;
+					((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData[pdev->classId])->GetEvent(req,&get_feature_return_buf);
+					// user must set return buffer in callback now
+					if(get_feature_return_buf == 0){
+						USBD_CtlError (pdev, req);
+						return USBD_FAIL;
+					}else{
+						USBD_CtlSendData (pdev, get_feature_return_buf, (uint8_t)(req->wLength));
+					}
+					break;
 
         default:
           USBD_CtlError(pdev, req);
