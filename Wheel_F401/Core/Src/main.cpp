@@ -143,7 +143,7 @@ int16_t updateEndstop() {
 	addtorque *= -clipdir;
 	addtorqueTest = addtorque;
 
-	return clip<int32_t, int32_t>(addtorque, -500, 500);
+	return clip<int32_t, int32_t>(addtorque, -700, 700);
 }
 
 /* USER CODE END 0 */
@@ -395,9 +395,9 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 0;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 1919;
+  htim3.Init.Period = 7499;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
   {
     Error_Handler();
@@ -506,7 +506,7 @@ void StartDefaultTask(void *argument)
 
 		effectTorque = callCalculateEffects(handler, reportHID.X, 1);
 
-		if (abs(effectTorque) >= 1919) {
+		if (abs(effectTorque) >= MAX_TORQUE) {
 			//clipped
 		}
 		// Scale for power and endstop margin

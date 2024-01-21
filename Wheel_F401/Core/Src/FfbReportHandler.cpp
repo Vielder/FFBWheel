@@ -189,6 +189,7 @@ void FfbReportHandler::SetEnvelope(
 void FfbReportHandler::SetCondition(
 		USB_FFBReport_SetCondition_Output_Data_t *data,
 		volatile TEffectState *effect) {
+
 	if(data->parameterBlockOffset != 0) //TODO if more axes are needed. Only X Axis is implemented now for the wheel.
 			return;
 	effect->cpOffset = data->cpOffset;
@@ -197,6 +198,7 @@ void FfbReportHandler::SetCondition(
 	effect->positiveSaturation = data->positiveSaturation;
 	effect->negativeSaturation = data->negativeSaturation;
 	effect->deadBand = data->deadBand;
+	effect->state = HID_EFFECT_PLAYING;
 }
 
 void FfbReportHandler::SetPeriodic(
@@ -278,7 +280,7 @@ void FfbReportHandler::sendStatusReport(uint8_t effect){
 	}
 	if(effect > 0 && gEffectStates[effect-1].state == 1)
 		pidState.status |= HID_EFFECT_PLAYING;
-	//printf("Status: %d\n",reportFFBStatus.status);
+	printf("Status: %d\n",pidState.status);
 	USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*)&pidState, sizeof(USB_FFBReport_PIDStatus_Input_Data_t));
 }
 
@@ -286,7 +288,7 @@ void FfbReportHandler::FfbOnUsbData(uint8_t event_idx, uint8_t *data,
 		uint16_t len) {
 
 	uint8_t effectId = data[0]-1; // effectBlockIndex-1
-	printf("OutReport:\tID:%d;\tData:%p\n", event_idx, data);
+	printf("OutReport:\tID:%d;\tData:%d\n", event_idx, data);
 	switch (event_idx)    // reportID
 	{
 		case HID_ID_EFFREP:
@@ -464,7 +466,7 @@ int32_t FfbReportHandler::calculateEffects(int32_t pos, uint8_t axis = 1) {
 		}
 
 		if (effect->counter++ > effect->duration) {
-			effect->state = 0;
+			effect->state = HID_EFFECT_PAUSE;
 		}
 
 	}
