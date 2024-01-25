@@ -668,7 +668,7 @@ __ALIGN_BEGIN static uint8_t CUSTOM_HID_ReportDesc_FS[USBD_CUSTOM_HID_REPORT_DES
 			0x05, 0x0F, // USAGE_PAGE (Physical Interface)
 			0x09, 0x89, // USAGE (PID Block Load Report)
 			0xA1, 0x02, // COLLECTION (Logical)
-				0x85, HID_ID_BLKLDREP, // REPORT_ID (18)
+				0x85, HID_ID_BLKLDREP, // REPORT_ID (12)
 				0x09, 0x22, // USAGE (Effect Block Index)
 				0x25, 0x28, // LOGICAL_MAXIMUM (28)
 				0x15, 0x01, // LOGICAL_MINIMUM (01)
@@ -816,16 +816,12 @@ static int8_t CUSTOM_HID_DeInit_FS(void)
 static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t* state)
 {
   /* USER CODE BEGIN 6 */
-  UNUSED(event_idx);
-  UNUSED(state);
-
   /* Start next USB packet transfer once data processing is completed */
   if (USBD_CUSTOM_HID_ReceivePacket(&hUsbDeviceFS) != (uint8_t)USBD_OK)
   {
-    return -1;
+    return USBD_FAIL;
   }
-  event_idx -= FFB_ID_OFFSET;// if offset id was set correct this
-	callFfbOnUsbData(handler ,event_idx , state, sizeof(state));
+  	callFfbOnUsbData(handler ,event_idx , state, sizeof(state));
 
   return (USBD_OK);
   /* USER CODE END 6 */
@@ -849,9 +845,7 @@ static int8_t USBD_CUSTOM_HID_SendReport_FS(uint8_t *report, uint16_t len)
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
 static int8_t CUSTOM_HID_GetEvent_FS(USBD_SetupReqTypedef* req,uint8_t** return_buf)
 {
-//  USBD_GetEvent_HID((req->wValue & 0xff),req->wLength,return_buf);
-
-  uint8_t event_idx = (req->wValue & 0xff) - FFB_ID_OFFSET;
+  uint8_t event_idx = (req->wValue & 0xff);
   printf("GetReport:\tID:%d\n",event_idx);
 	switch(event_idx){
 	case HID_ID_BLKLDREP:

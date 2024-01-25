@@ -45,6 +45,7 @@ EndBSPDependencies */
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_customhid.h"
 #include "usbd_ctlreq.h"
+#include "HIDReportType.h"
 
 
 /** @addtogroup STM32_USB_DEVICE_LIBRARY
@@ -104,6 +105,8 @@ static uint8_t *USBD_CUSTOM_HID_GetDeviceQualifierDesc(uint16_t *length);
 /** @defgroup USBD_CUSTOM_HID_Private_Variables
   * @{
   */
+
+USBD_CUSTOM_HID_HandleTypeDef *hhid;
 
 USBD_ClassTypeDef  USBD_CUSTOM_HID =
 {
@@ -248,7 +251,6 @@ static uint8_t CUSTOMHIDOutEpAdd = CUSTOM_HID_EPOUT_ADDR;
 static uint8_t USBD_CUSTOM_HID_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 {
   UNUSED(cfgidx);
-  USBD_CUSTOM_HID_HandleTypeDef *hhid;
 
   hhid = (USBD_CUSTOM_HID_HandleTypeDef *)USBD_malloc(sizeof(USBD_CUSTOM_HID_HandleTypeDef));
 
@@ -290,15 +292,20 @@ static uint8_t USBD_CUSTOM_HID_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 
   pdev->ep_out[CUSTOMHIDOutEpAdd & 0xFU].is_used = 1U;
 
-  hhid->state = CUSTOM_HID_IDLE;
+	if(hhid == NULL)
+	{
+		return (uint8_t)USBD_BUSY;
+	}
+	else
+	{
+		hhid = (USBD_CUSTOM_HID_HandleTypeDef*) hhid;
 
-  ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData[pdev->classId])->Init();
-
-#ifndef USBD_CUSTOMHID_OUT_PREPARE_RECEIVE_DISABLED
-  /* Prepare Out endpoint to receive 1st packet */
-  (void)USBD_LL_PrepareReceive(pdev, CUSTOMHIDOutEpAdd, hhid->Report_buf,
-                               USBD_CUSTOMHID_OUTREPORT_BUF_SIZE);
-#endif /* USBD_CUSTOMHID_OUT_PREPARE_RECEIVE_DISABLED */
+		hhid->state = CUSTOM_HID_IDLE;
+		((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData[pdev->classId])->Init();
+					/* Prepare Out endpoint to receive 1st packet */
+		USBD_LL_PrepareReceive(pdev, CUSTOM_HID_EPOUT_ADDR, hhid->Report_buf,
+													 USBD_CUSTOMHID_OUTREPORT_BUF_SIZE);
+	}
 
   return (uint8_t)USBD_OK;
 }
@@ -352,12 +359,10 @@ static uint8_t USBD_CUSTOM_HID_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 static uint8_t USBD_CUSTOM_HID_Setup(USBD_HandleTypeDef *pdev,
                                      USBD_SetupReqTypedef *req)
 {
-  USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef *)pdev->pClassDataCmsit[pdev->classId];
+  hhid = (USBD_CUSTOM_HID_HandleTypeDef *)pdev->pClassDataCmsit[pdev->classId];
   uint16_t len = 0U;
-#ifdef USBD_CUSTOMHID_CTRL_REQ_GET_REPORT_ENABLED
   uint8_t* get_feature_return_buf;
-	get_feature_return_buf = (uint8_t*)malloc(sizeof(USB_FFBReport_PIDPool_Feature_Data_t));
-#endif /* USBD_CUSTOMHID_CTRL_REQ_GET_REPORT_ENABLED */
+//	get_feature_return_buf = (uint8_t*)malloc(sizeof(USB_FFBReport_PIDPool_Feature_Data_t));
   uint8_t  *pbuf = NULL;
   uint16_t status_info = 0U;
   USBD_StatusTypeDef ret = USBD_OK;
@@ -389,19 +394,10 @@ static uint8_t USBD_CUSTOM_HID_Setup(USBD_HandleTypeDef *pdev,
           break;
 
         case CUSTOM_HID_REQ_SET_REPORT:
-#ifdef USBD_CUSTOMHID_CTRL_REQ_COMPLETE_CALLBACK_ENABLED
-          if (((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData[pdev->classId])->CtrlReqComplete != NULL)
-          {
-            /* Let the application decide when to enable EP0 to receive the next report */
-            ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData[pdev->classId])->CtrlReqComplete(req->bRequest,
-                                                                                            req->wLength);
-          }
-#endif /* USBD_CUSTOMHID_CTRL_REQ_COMPLETE_CALLBACK_ENABLED */
-#ifndef USBD_CUSTOMHID_EP0_OUT_PREPARE_RECEIVE_DISABLED
+
           hhid->IsReportAvailable = 1U;
           (void)USBD_CtlPrepareRx(pdev, hhid->Report_buf,
                                   MIN(req->wLength, USBD_CUSTOMHID_OUTREPORT_BUF_SIZE));
-#endif /* USBD_CUSTOMHID_EP0_OUT_PREPARE_RECEIVE_DISABLED */
           break;
         case CUSTOM_HID_REQ_GET_REPORT:
 					get_feature_return_buf = 0;
@@ -654,20 +650,14 @@ static uint8_t USBD_CUSTOM_HID_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
   */
 static uint8_t USBD_CUSTOM_HID_DataOut(USBD_HandleTypeDef *pdev, uint8_t epnum)
 {
-  UNUSED(epnum);
-  USBD_CUSTOM_HID_HandleTypeDef *hhid;
-
-  if (pdev->pClassDataCmsit[pdev->classId] == NULL)
-  {
-    return (uint8_t)USBD_FAIL;
-  }
-
-  hhid = (USBD_CUSTOM_HID_HandleTypeDef *)pdev->pClassDataCmsit[pdev->classId];
 
   /* USB data will be immediately processed, this allow next USB traffic being
   NAKed till the end of the application processing */
   ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData[pdev->classId])->OutEvent(hhid->Report_buf[0],
-                                                                           &hhid->Report_buf[1]);
+  		(uint8_t*)&hhid->Report_buf);
+
+  USBD_LL_PrepareReceive(pdev, CUSTOM_HID_EPOUT_ADDR , hhid->Report_buf,
+                           USBD_CUSTOMHID_OUTREPORT_BUF_SIZE);
 
   return (uint8_t)USBD_OK;
 }
@@ -721,7 +711,7 @@ static uint8_t USBD_CUSTOM_HID_EP0_RxReady(USBD_HandleTypeDef *pdev)
   if (hhid->IsReportAvailable == 1U)
   {
     ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData[pdev->classId])->OutEvent(hhid->Report_buf[0],
-                                                                             &hhid->Report_buf[1]);
+    		(uint8_t*)&hhid->Report_buf);
     hhid->IsReportAvailable = 0U;
   }
 

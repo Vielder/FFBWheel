@@ -98,7 +98,7 @@ volatile uint16_t adcResultsDMA[3];
 const int adcChannelCount = sizeof(adcResultsDMA) / sizeof(adcResultsDMA[0]);
 volatile int adcConversionComplete = 0; // set by callback
 
-uint8_t fx_ratio_i = 50; // Reduce effects to a certain ratio of the total power to have a margin for the endstop
+uint8_t fx_ratio_i = 80; // Reduce effects to a certain ratio of the total power to have a margin for the endstop
 int32_t torque = 0; // last torque
 int32_t effectTorque = 0; // last torque
 int32_t lastEnc = 0;
@@ -395,9 +395,9 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 0;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 7499;
+  htim3.Init.Period = 1919;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
   {
     Error_Handler();
@@ -514,11 +514,11 @@ void StartDefaultTask(void *argument)
 		effectTorque *= effect_margin_scaler;
 
 		// Always check if endstop reached
-		int32_t endstopTorque = updateEndstop();
-		endstopTorqueTest = endstopTorque;
+//		int32_t endstopTorque = updateEndstop();
+//		endstopTorqueTest = endstopTorque;
 
 		// Calculate total torque
-		torque += effectTorque + endstopTorque;
+		torque += effectTorque;
 
 		// Torque changed
 		if (torque != lastTorque) {
@@ -538,6 +538,7 @@ void StartDefaultTask(void *argument)
 			}
 			int32_t val = (uint32_t) abs(torque) + 600;
 			torqueTest = torque;
+			printf("\tTorque = %lu",torque);
 
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, val);
 		}

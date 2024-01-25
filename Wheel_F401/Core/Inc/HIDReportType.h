@@ -46,147 +46,6 @@
 #define HID_ENABLE_ACTUATORS_MASK 0xFD
 #define HID_EFFECT_PLAYING 		0x10
 
-#include <stdint.h>
-
-// ---- Input
-typedef struct { //WheelReport
-		uint8_t buttons;
-		int16_t xAxis;
-		int16_t yAxis;
-		int16_t zAxis;
-		int16_t rxAxis;
-		int16_t ryAxis;
-		int16_t rzAxis;
-} USB_FFBReport_WheelReport_Input_Data_t;
-
-// ---- Output
-typedef struct { // FFB: Set Effect Output Report
-//  uint8_t	reportId;	// =1
-		uint8_t effectBlockIndex;	// 1..40
-		uint8_t effectType;	// 1..12 (effect usages: 26,27,30,31,32,33,34,40,41,42,43,28)
-		uint16_t duration; // 0..32767 ms
-		uint16_t triggerRepeatInterval; // 0..32767 ms
-		uint16_t samplePeriod;	// 0..32767 ms
-		uint8_t gain;	// 0..255	 (physical 0..10000)
-		uint8_t triggerButton;	// button ID (0..8)
-		uint8_t enableAxis; // bits: 0=X, 1=Y, 2=DirectionEnable
-		uint8_t directionX;	// angle (0=0 .. 255=360deg)
-		uint8_t directionY;	// angle (0=0 .. 255=360deg)
-		//	uint16_t	startDelay;	// 0..32767 ms
-} USB_FFBReport_SetEffect_Output_Data_t;
-
-typedef struct { // FFB: Set Envelope Output Report
-//  uint8_t	reportId;	// =2
-		uint8_t effectBlockIndex;	// 1..40
-		uint16_t attackLevel;
-		uint16_t fadeLevel;
-		uint16_t attackTime;	// ms
-		uint16_t fadeTime;	// ms
-} USB_FFBReport_SetEnvelope_Output_Data_t;
-
-typedef struct { // FFB: Set Condition Output Report
-//  uint8_t	reportId;	// =3
-		uint8_t effectBlockIndex;	// 1..40
-		uint8_t parameterBlockOffset;	// bits: 0..3=parameterBlockOffset, 4..5=instance1, 6..7=instance2
-		int16_t cpOffset;	// 0..255
-		int16_t positiveCoefficient;	// -128..127
-		int16_t negativeCoefficient;	// -128..127
-		uint16_t positiveSaturation;	// -	128..127
-		uint16_t negativeSaturation;	// -128..127
-		uint16_t deadBand;	// 0..255
-} USB_FFBReport_SetCondition_Output_Data_t;
-
-typedef struct { // FFB: Set Periodic Output Report
-//  uint8_t	reportId;	// =4
-		uint8_t effectBlockIndex;	// 1..40
-		uint16_t magnitude;
-		int16_t offset;
-		uint16_t phase;	// 0..255 (=0..359, exp-2)
-		uint16_t period;	// 0..32767 ms
-} USB_FFBReport_SetPeriodic_Output_Data_t;
-
-typedef struct { // FFB: Set ConstantForce Output Report
-//  uint8_t	reportId;	// =5
-		uint8_t effectBlockIndex;	// 1..40
-		int16_t magnitude;	// -255..255
-} USB_FFBReport_SetConstantForce_Output_Data_t;
-
-typedef struct { // FFB: Set RampForce Output Report
-//  uint8_t	reportId;	// =6
-		uint8_t effectBlockIndex;	// 1..40
-		int16_t startMagnitude;
-		int16_t endMagnitude;
-} USB_FFBReport_SetRampForce_Output_Data_t;
-
-typedef struct { // FFB: Set CustomForceData Output Report
-//  uint8_t	reportId;	// =7
-		uint8_t effectBlockIndex;	// 1..40
-		uint16_t dataOffset;
-		int8_t data[12];
-} USB_FFBReport_SetCustomForceData_Output_Data_t;
-
-typedef struct { // FFB: Set DownloadForceSample Output Report
-//  uint8_t	reportId;	// =8
-		int8_t x;
-		int8_t y;
-} USB_FFBReport_SetDownloadForceSample_Output_Data_t;
-
-typedef struct { // FFB: Set EffectOperation Output Report
-//  uint8_t	reportId;	// =10
-		uint8_t effectBlockIndex;	// 1..40
-		uint8_t operation; // 1=Start, 2=StartSolo, 3=Stop
-		uint8_t loopCount;
-} USB_FFBReport_EffectOperation_Output_Data_t;
-
-typedef struct { // FFB: Block Free Output Report
-//  uint8_t	reportId;	// =11
-		uint8_t effectBlockIndex;	// 1..40
-} USB_FFBReport_BlockFree_Output_Data_t;
-
-typedef struct { // FFB: Device Control Output Report
-//  uint8_t	reportId;	// =12
-		uint8_t control;// 1=Enable Actuators, 2=Disable Actuators, 4=Stop All Effects, 8=Reset, 16=Pause, 32=Continue
-} USB_FFBReport_DeviceControl_Output_Data_t;
-
-typedef struct { // FFB: DeviceGain Output Report
-		uint8_t reportId;	// =13
-		uint8_t gain;
-} USB_FFBReport_DeviceGain_Output_Data_t;
-
-typedef struct { // FFB: DeviceGain Output Report
-//  uint8_t	reportId;	// =13
-		uint8_t gain;
-} USB_FFBReport_DeviceGain_Output_Data_Map_t;
-
-typedef struct { // FFB: Set Custom Force Output Report
-//  uint8_t		reportId;	// =14
-		uint8_t effectBlockIndex;	// 1..40
-		uint8_t sampleCount;
-		uint16_t samplePeriod;	// 0..32767 ms
-} USB_FFBReport_SetCustomForce_Output_Data_t;
-
-// ---- Features
-
-typedef struct { // FFB: Create New Effect Feature Report
-//  uint8_t		reportId;	// =1
-		uint8_t effectType;	// Enum (1..12): ET 26,27,30,31,32,33,34,40,41,42,43,28
-		uint16_t byteCount;	// 0..511
-} USB_FFBReport_CreateNewEffect_Feature_Data_t;
-
-typedef struct { // FFB: PID Pool Feature Report
-		uint8_t reportId;	// =3
-		uint16_t ramPoolSize;	// ?
-		uint8_t maxSimultaneousEffects;	// ?? 40?
-		uint8_t memoryManagement;	// Bits: 0=DeviceManagedPool, 1=SharedParameterBlocks
-} USB_FFBReport_PIDPool_Feature_Data_t;
-
-typedef struct { // FFB: PID Block Load Feature Report
-		uint8_t reportId;	// =2
-		uint8_t effectBlockIndex;	// 1..40
-		uint8_t loadStatus;	// 1=Success,2=Full,3=Error
-		uint16_t ramPoolAvailable;	// =0 or 0xFFFF?
-} USB_FFBReport_PIDBlockLoad_Feature_Data_t;
-
 // ---- effect
 
 #define USB_DURATION_INFINITE		0x7FFF
@@ -220,7 +79,233 @@ typedef struct { // FFB: PID Block Load Feature Report
 #define INERTIA_DEADBAND				0x30
 #define FRICTION_DEADBAND				0x30
 
+
+#include <stdint.h>
+
+// ---- Input
+typedef struct { //WheelReport
+		uint8_t buttons;
+		int16_t xAxis;
+		int16_t yAxis;
+		int16_t zAxis;
+		int16_t rxAxis;
+		int16_t ryAxis;
+		int16_t rzAxis;
+} USB_FFBReport_WheelReport_Input_Data_t;
+
 #ifdef __cplusplus
+
+// ---- Output
+
+typedef struct { // FFB: Set Effect Output Report
+  	uint8_t	reportId = 1;	// =1
+		uint8_t effectBlockIndex;	// 1..40
+		uint8_t effectType;	// 1..12 (effect usages: 26,27,30,31,32,33,34,40,41,42,43,28)
+		uint16_t duration; // 0..32767 ms
+		uint16_t triggerRepeatInterval; // 0..32767 ms
+		uint16_t samplePeriod;	// 0..32767 ms
+		uint8_t gain;	// 0..255	 (physical 0..10000)
+		uint8_t triggerButton;	// button ID (0..8)
+		uint8_t enableAxis; // bits: 0=X, 1=Y, 2=DirectionEnable
+		uint8_t directionX;	// angle (0=0 .. 255=360deg)
+		uint8_t directionY;	// angle (0=0 .. 255=360deg)
+		//	uint16_t	startDelay;	// 0..32767 ms
+} __attribute__((packed)) USB_FFBReport_SetEffect_Output_Data_t;
+
+typedef struct { // FFB: Set Envelope Output Report
+		uint8_t	reportId = 2;	// =2
+		uint8_t effectBlockIndex;	// 1..40
+		uint16_t attackLevel;
+		uint16_t fadeLevel;
+		uint16_t attackTime;	// ms
+		uint16_t fadeTime;	// ms
+} __attribute__((packed)) USB_FFBReport_SetEnvelope_Output_Data_t;
+
+typedef struct { // FFB: Set Condition Output Report
+		uint8_t	reportId = 3;	// =3
+		uint8_t effectBlockIndex;	// 1..40
+		uint8_t parameterBlockOffset;	// bits: 0..3=parameterBlockOffset, 4..5=instance1, 6..7=instance2
+		int16_t cpOffset;	// 0..255
+		int16_t positiveCoefficient;	// -128..127
+		int16_t negativeCoefficient;	// -128..127
+		uint16_t positiveSaturation;	// -	128..127
+		uint16_t negativeSaturation;	// -128..127
+		uint16_t deadBand;	// 0..255
+} __attribute__((packed)) USB_FFBReport_SetCondition_Output_Data_t;
+
+typedef struct { // FFB: Set Periodic Output Report
+		uint8_t	reportId = 4;	// =4
+		uint8_t effectBlockIndex;	// 1..40
+		uint16_t magnitude;
+		int16_t offset;
+		uint16_t phase;	// 0..255 (=0..359, exp-2)
+		uint16_t period;	// 0..32767 ms
+} __attribute__((packed)) USB_FFBReport_SetPeriodic_Output_Data_t;
+
+typedef struct { // FFB: Set ConstantForce Output Report
+		uint8_t	reportId = 5;	// =5
+		uint8_t effectBlockIndex;	// 1..40
+		int16_t magnitude;	// -255..255
+} __attribute__((packed)) USB_FFBReport_SetConstantForce_Output_Data_t;
+
+typedef struct { // FFB: Set RampForce Output Report
+		uint8_t	reportId = 6;	// =6
+		uint8_t effectBlockIndex;	// 1..40
+		int16_t startMagnitude;
+		int16_t endMagnitude;
+} __attribute__((packed)) USB_FFBReport_SetRampForce_Output_Data_t;
+
+typedef struct { // FFB: Set CustomForceData Output Report
+		uint8_t	reportId = 7;	// =7
+		uint8_t effectBlockIndex;	// 1..40
+		uint16_t dataOffset;
+		int8_t data[12];
+} __attribute__((packed)) USB_FFBReport_SetCustomForceData_Output_Data_t;
+
+typedef struct { // FFB: Set DownloadForceSample Output Report
+		uint8_t	reportId = 8;	// =8
+		int8_t x;
+		int8_t y;
+} __attribute__((packed)) USB_FFBReport_SetDownloadForceSample_Output_Data_t;
+
+typedef struct { // FFB: Set EffectOperation Output Report
+		uint8_t	reportId = 10;
+		uint8_t effectBlockIndex;	// 1..40
+		uint8_t operation; // 1=Start, 2=StartSolo, 3=Stop
+		uint8_t loopCount;
+} __attribute__((packed)) USB_FFBReport_EffectOperation_Output_Data_t;
+
+typedef struct { // FFB: Block Free Output Report
+//  uint8_t	reportId;	// =11
+		uint8_t effectBlockIndex;	// 1..40
+} __attribute__((packed)) USB_FFBReport_BlockFree_Output_Data_t;
+
+typedef struct { // FFB: Device Control Output Report
+		uint8_t	reportId = 12;
+		uint8_t control;// 1=Enable Actuators, 2=Disable Actuators, 4=Stop All Effects, 8=Reset, 16=Pause, 32=Continue
+} __attribute__((packed)) USB_FFBReport_DeviceControl_Output_Data_t;
+
+
+typedef struct { // FFB: Set Custom Force Output Report
+//  uint8_t		reportId;	// =14
+		uint8_t effectBlockIndex;	// 1..40
+		uint8_t sampleCount;
+		uint16_t samplePeriod;	// 0..32767 ms
+} USB_FFBReport_SetCustomForce_Output_Data_t;
+
+// ---- Features
+
+
+typedef struct { // FFB: PID Pool Feature Report
+		uint8_t reportId;	// =3
+		uint16_t ramPoolSize;	// ?
+		uint8_t maxSimultaneousEffects;	// ?? 40?
+		uint8_t memoryManagement;	// Bits: 0=DeviceManagedPool, 1=SharedParameterBlocks
+} USB_FFBReport_PIDPool_Feature_Data_t;
+
+typedef struct { // FFB: PID Block Load Feature Report
+		uint8_t reportId;	// =2
+		uint8_t effectBlockIndex;	// 1..40
+		uint8_t loadStatus;	// 1=Success,2=Full,3=Error
+		uint16_t ramPoolAvailable;	// =0 or 0xFFFF?
+} USB_FFBReport_PIDBlockLoad_Feature_Data_t;
+
+typedef struct
+	{
+	uint8_t		reportId = 1;
+	uint8_t		effectBlockIndex = 0;	// 1..max_effects
+	uint8_t		effectType = 0;
+	uint16_t	duration = 0; // 0..32767 ms
+	uint16_t	triggerRepeatInterval = 0; // 0..32767 ms
+	uint16_t	samplePeriod = 0;	// 0..32767 ms
+	uint8_t		gain = 255;	// 0..255 scaler
+	uint8_t		triggerButton = 0;	// button ID. unused
+	uint8_t		enableAxis = 0; // bits: 0=X, 1=Y, 2=DirectionEnable
+	uint8_t		directionX = 0;	// angle (0=0 .. 255=360deg)
+	uint8_t		directionY = 0;	// angle (0=0 .. 255=360deg)
+//	uint16_t	typeSpecificBlockOffsetX = 0; // Needed?
+//	uint16_t	typeSpecificBlockOffsetY = 0;
+//	uint16_t	startDelay;	// 0..32767 ms
+} __attribute__((packed)) FFB_SetEffect_t;
+
+typedef struct
+	{
+	uint8_t		reportId;
+	uint8_t		effectBlockIndex;	// 1..max_effects
+	uint8_t		parameterBlockOffset;	// bits: 0..3=parameterBlockOffset, 4..5=instance1, 6..7=instance2
+	int16_t  	cpOffset;	// Center
+	int16_t		positiveCoefficient; // Scaler for positive range
+	int16_t		negativeCoefficient;
+	uint16_t	positiveSaturation;	// Clipping point for positive range
+	uint16_t	negativeSaturation;
+	uint16_t	deadBand;
+} __attribute__((packed)) FFB_SetCondition_Data_t;
+
+
+
+typedef struct
+	{
+	uint8_t	reportId = HID_ID_BLKLDREP;
+	uint8_t effectBlockIndex;	// 1..max_effects
+	uint8_t	loadStatus;	// 1=Success,2=Full,3=Error
+	uint16_t	ramPoolAvailable;
+} __attribute__((packed)) FFB_BlockLoad_Feature_Data_t;
+
+
+
+typedef struct
+	{
+	uint8_t	reportId = HID_ID_POOLREP;
+	uint16_t	ramPoolSize = MAX_EFFECTS;
+	uint8_t		maxSimultaneousEffects = MAX_EFFECTS;
+	uint8_t		memoryManagement = 1;	// 0=DeviceManagedPool, 1=SharedParameterBlocks
+} __attribute__((packed)) FFB_PIDPool_Feature_Data_t;
+
+
+typedef struct
+	{
+	uint8_t	reportId;
+	uint8_t	effectBlockIndex;
+	uint16_t magnitude;
+	int16_t	offset;
+	uint16_t	phase;	// degrees
+	uint16_t	period;	// 0..32767 ms
+} __attribute__((packed)) FFB_SetPeriodic_Data_t;
+
+typedef struct
+	{
+	uint8_t	reportId;
+	uint8_t	effectBlockIndex;	// 1..max_effects
+	int16_t magnitude;	// High res intensity
+} __attribute__((packed)) FFB_SetConstantForce_Data_t;
+
+typedef struct { // FFB: DeviceGain Output Report
+		uint8_t	reportId = 13;	// =13
+		uint8_t gain;
+} USB_FFBReport_DeviceGain_Output_Data_Map_t;
+
+// Internal struct for storing effects
+typedef struct
+{
+	volatile uint8_t state = 0;
+	uint8_t 	type=FFB_EFFECT_NONE; // Type
+	uint8_t 	gain=255;	// Scaler. often unused
+	int16_t		positiveCoefficient=0;
+	int16_t		negativeCoefficient=0;
+	uint16_t	positiveSaturation=0;
+	uint16_t	negativeSaturation=0;
+	int16_t 	magnitude = 0;	// High res intensity of effect
+	int16_t 	phase=0;
+	int16_t 	offset=0;	// Center point
+	int32_t 	last_value = 0;
+	uint16_t 	counter=0;	// Elapsed time in ms
+	uint16_t 	period=0;
+	uint16_t 	duration=0,fadeTime=0,attackTime=0;	// Duration in ms
+	uint16_t 	samplePeriod = 0;
+	uint8_t 	axis = 0;	// Active axis
+	uint16_t	deadBand = 0;
+} FFB_Effect;
+
 
 typedef struct {
 		volatile uint8_t state = 0;  // see constants <MEffectState_*>
@@ -256,5 +341,12 @@ typedef struct { //PID State
 } USB_FFBReport_PIDStatus_Input_Data_t;
 
 #endif //c++
+
+typedef struct
+	{
+	uint8_t		reportId;
+	uint8_t	effectType;	// Effect type ID
+	uint16_t	byteCount;	// Size of custom effects
+} FFB_CreateNewEffect_Feature_Data_t;
 
 #endif /* INC_HIDREPORTTYPE_H_ */

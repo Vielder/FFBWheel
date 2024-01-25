@@ -20,16 +20,19 @@
 #ifndef __USB_CUSTOMHID_H
 #define __USB_CUSTOMHID_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+
 
 /* Includes ------------------------------------------------------------------*/
 #include  "usbd_ioreq.h"
+#include "FfbReportHandler.h"
 
 /** @addtogroup STM32_USB_DEVICE_LIBRARY
   * @{
   */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** @defgroup USBD_CUSTOM_HID
   * @brief This file is the Header file for USBD_customhid.c

@@ -25,7 +25,7 @@ extern "C" uint8_t* callFfbOnPIDPool(void* handler) {
 }
 
 extern "C" void callFfbOnCreateNewEffect(void* handler,
-		USB_FFBReport_CreateNewEffect_Feature_Data_t *inData) {
+		FFB_CreateNewEffect_Feature_Data_t *inData) {
 	static_cast<FfbReportHandler*>(handler)->FfbOnCreateNewEffect(inData);
 }
 

@@ -41,6 +41,7 @@ void FfbReportHandler::StopAllEffects(void) {
 }
 
 void FfbReportHandler::StartEffect(uint8_t id) {
+	printf("Starting effect %d\n", id);
 	if (id > MAX_EFFECTS)
 		return;
 	gEffectStates[id].state = MEFFECTSTATE_PLAYING;
@@ -59,7 +60,7 @@ void FfbReportHandler::StopEffect(uint8_t id) {
 void FfbReportHandler::FreeEffect(uint8_t id) {
 	if (id > MAX_EFFECTS)
 		return;
-	gEffectStates[id].state = 0;
+	gEffectStates[id].state = MEFFECTSTATE_FREE;
 	if (id < nextEID)
 		nextEID = id;
 }
@@ -96,6 +97,7 @@ void FfbReportHandler::FfbHandle_EffectOperation(
 void FfbReportHandler::FfbHandle_BlockFree(
 		USB_FFBReport_BlockFree_Output_Data_t *data) {
 	uint8_t eid = data->effectBlockIndex-1;
+	printf("Free effect %d\n", eid);
 
 	if (eid == 0xFF) { // all effects
 		FreeAllEffects();
@@ -134,7 +136,7 @@ void FfbReportHandler::FfbHandle_DeviceControl(
 
 void FfbReportHandler::FfbHandle_DeviceGain(
 		USB_FFBReport_DeviceGain_Output_Data_Map_t *data) {
-	deviceGain.gain = data->gain;
+//	deviceGain.gain = data->gain;
 }
 
 void FfbReportHandler::FfbHandle_SetCustomForce(
@@ -150,7 +152,7 @@ void FfbReportHandler::FfbHandle_SetDownloadForceSample(
 }
 
 void FfbReportHandler::FfbHandle_SetEffect(
-		USB_FFBReport_SetEffect_Output_Data_t *data) {
+		FFB_SetEffect_t *data) {
 	uint8_t index = data->effectBlockIndex;
 	if(index > MAX_EFFECTS || index == 0){
 			return;
@@ -163,7 +165,6 @@ void FfbReportHandler::FfbHandle_SetEffect(
 	effect->directionY = data->directionY;
 	effect->effectType = data->effectType;
 	effect->gain = data->gain;
-	effect->duration = data->duration;
 	effect->period = data->samplePeriod;
 	if (data->enableAxis & 0x4) {
 		// All axes
@@ -175,6 +176,7 @@ void FfbReportHandler::FfbHandle_SetEffect(
 		effect->counter = 0;
 		effect->last_value = 0;
 	}
+	printf("Setting effect parameters{duration: %d\tdirectionX: %d\tdirectionY: %d\tEffectType:%d\tgain: %d\tperiod: %d\tenableAxis: %d\t}\n",effect->duration,effect->directionX,effect->directionY,effect->effectType,effect->gain,effect->period,effect->enableAxis);
 }
 
 void FfbReportHandler::SetEnvelope(
@@ -187,22 +189,23 @@ void FfbReportHandler::SetEnvelope(
 }
 
 void FfbReportHandler::SetCondition(
-		USB_FFBReport_SetCondition_Output_Data_t *data,
+		FFB_SetCondition_Data_t *data,
 		volatile TEffectState *effect) {
 
-	if(data->parameterBlockOffset != 0) //TODO if more axes are needed. Only X Axis is implemented now for the wheel.
+	if(data->effectBlockIndex == 0)
 			return;
+
 	effect->cpOffset = data->cpOffset;
 	effect->positiveCoefficient = data->positiveCoefficient;
 	effect->negativeCoefficient = data->negativeCoefficient;
 	effect->positiveSaturation = data->positiveSaturation;
 	effect->negativeSaturation = data->negativeSaturation;
 	effect->deadBand = data->deadBand;
-	effect->state = HID_EFFECT_PLAYING;
+	printf("Setting condition with{cpOffset: %d\tposCoef: %d\tnegCoef: %d\tposSat: %d\tnegSat: %d\tdeadBand: %d\t}\n",effect->cpOffset,effect->positiveCoefficient,effect->negativeCoefficient,effect->positiveSaturation,effect->negativeSaturation,effect->deadBand);
 }
 
 void FfbReportHandler::SetPeriodic(
-		USB_FFBReport_SetPeriodic_Output_Data_t *data,
+		FFB_SetPeriodic_Data_t *data,
 		volatile TEffectState *effect) {
 	effect->magnitude = data->magnitude;
 	effect->offset = data->offset;
@@ -211,9 +214,10 @@ void FfbReportHandler::SetPeriodic(
 }
 
 void FfbReportHandler::SetConstantForce(
-		USB_FFBReport_SetConstantForce_Output_Data_t *data,
+		FFB_SetConstantForce_Data_t *data,
 		volatile TEffectState *effect) {
 	effect->magnitude = data->magnitude;
+	printf("Setting condition with magnitude=%d\n",effect->magnitude);
 }
 
 void FfbReportHandler::SetRampForce(
@@ -224,53 +228,54 @@ void FfbReportHandler::SetRampForce(
 }
 
 void FfbReportHandler::FfbOnCreateNewEffect(
-		USB_FFBReport_CreateNewEffect_Feature_Data_t *inData) {
+		FFB_CreateNewEffect_Feature_Data_t *inData) {
 
 	uint8_t index = GetNextFreeEffect(inData->effectType); // next effect
 	if (index == 0) {
 		pidBlockLoad.loadStatus = 2;
 		return;
 	}
-	//printf("Creating Effect: %d at %d\n",effect->effectType,index);
 
 	volatile TEffectState *effect = &gEffectStates[index - 1];
 
+	printf("Creating Effect: %d at %d\n",inData->effectType,index-1);
+
 	memset((void*) effect, 0, sizeof(TEffectState));
-	effect->state = MEFFECTSTATE_ALLOCATED;
 	effect->effectType = inData->effectType;
 
 	pidBlockLoad.reportId = HID_ID_BLKLDREP;
 	usedMemory += SIZE_EFFECT;
-	pidState.effectBlockIndex = index;
 	pidBlockLoad.effectBlockIndex = index;
 	pidBlockLoad.ramPoolAvailable = MEMORY_SIZE - usedMemory;
-	pidBlockLoad.loadStatus = 1;
+	pidBlockLoad.loadStatus = MEFFECTSTATE_ALLOCATED;
+	sendStatusReport(index);
 }
 
 uint8_t* FfbReportHandler::FfbOnPIDPool() {
-  FreeAllEffects();
 	pidPoolReport.reportId = HID_ID_POOLREP;
 	pidPoolReport.ramPoolSize = MEMORY_SIZE;
 	pidPoolReport.maxSimultaneousEffects = MAX_EFFECTS;
 	pidPoolReport.memoryManagement = 3;
-	return (uint8_t*) &pidPoolReport;
+	printf("Sending PIDPool:\n\tID:%d;\n\tRamPool:%d\n\tMaxEffects:%d\n\tMemoryMng:%d\n",pidPoolReport.reportId,pidPoolReport.ramPoolSize,pidPoolReport.maxSimultaneousEffects,pidPoolReport.memoryManagement);
+		return (uint8_t*) &pidPoolReport;
 }
 
 uint8_t* FfbReportHandler::FfbOnPIDBlockLoad() {
+	printf("Sending PIDBlock:\n\tID:%d;\n\tEffectBlockIndex:%d\n\tLoadStatus:%d\n\tRamAvaliable:%d\n",pidBlockLoad.reportId,pidBlockLoad.effectBlockIndex,pidBlockLoad.loadStatus,pidBlockLoad.ramPoolAvailable);
 	return (uint8_t*) &pidBlockLoad;
-	USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*)&pidBlockLoad, sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
+
 }
 
 uint8_t* FfbReportHandler::FfbOnPIDStatus() {
+	printf("Sending status:\n\tID:%d;\n\tStatus:%d\n\tEffectBlockIndex:%d\n",pidState.reportId,pidState.status,pidState.effectBlockIndex);
 	return (uint8_t*) &pidState;
-	USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*)&pidState, sizeof(USB_FFBReport_PIDStatus_Input_Data_t));
 }
 
 /*
  * Sends a status report for a specific effect
  */
 void FfbReportHandler::sendStatusReport(uint8_t effect){
-	pidState.effectBlockIndex = effect;
+	pidState.effectBlockIndex = effect-1;
 	pidState.status = HID_ACTUATOR_POWER;
 	if(ffb_active){
 		pidState.status |= HID_ENABLE_ACTUATORS;
@@ -287,40 +292,48 @@ void FfbReportHandler::sendStatusReport(uint8_t effect){
 void FfbReportHandler::FfbOnUsbData(uint8_t event_idx, uint8_t *data,
 		uint16_t len) {
 
-	uint8_t effectId = data[0]-1; // effectBlockIndex-1
-	printf("OutReport:\tID:%d;\tData:%d\n", event_idx, data);
-	switch (event_idx)    // reportID
+	printf("OutReport:\tID:%d;\n", event_idx);
+
+	printf("Data:");
+	for (uint16_t i = 0; i < 20; ++i) {
+			printf(" %d", data[i]);
+	}
+	printf("\n");
+
+	uint8_t effectId = data[1]-1;
+
+	switch (event_idx - FFB_ID_OFFSET)    // reportID
 	{
 		case HID_ID_EFFREP:
-			FfbHandle_SetEffect((USB_FFBReport_SetEffect_Output_Data_t*) data);
+			FfbHandle_SetEffect((FFB_SetEffect_t*) data);
 			break;
 		case HID_ID_ENVREP:
 			SetEnvelope((USB_FFBReport_SetEnvelope_Output_Data_t*) data,
 					&gEffectStates[effectId]);
 			break;
 		case HID_ID_CONDREP:
-			SetCondition((USB_FFBReport_SetCondition_Output_Data_t*) data,
+			SetCondition((FFB_SetCondition_Data_t*) data,
 					&gEffectStates[effectId]);
 			break;
 		case HID_ID_PRIDREP:
-			SetPeriodic((USB_FFBReport_SetPeriodic_Output_Data_t*) data,
+			SetPeriodic((FFB_SetPeriodic_Data_t*) data,
 					&gEffectStates[effectId]);
 			break;
 		case HID_ID_CONSTREP:
-			SetConstantForce((USB_FFBReport_SetConstantForce_Output_Data_t*) data,
+			SetConstantForce((FFB_SetConstantForce_Data_t*) data,
 					&gEffectStates[effectId]);
 			break;
 		case HID_ID_RAMPREP:
-			SetRampForce((USB_FFBReport_SetRampForce_Output_Data_t*) data,
-					&gEffectStates[effectId]);
+//			SetRampForce((USB_FFBReport_SetRampForce_Output_Data_t*) data,
+//					&gEffectStates[effectId]);
 			break;
 		case HID_ID_CSTMREP:
-			FfbHandle_SetCustomForceData(
-					(USB_FFBReport_SetCustomForceData_Output_Data_t*) data);
+//			FfbHandle_SetCustomForceData(
+//					(USB_FFBReport_SetCustomForceData_Output_Data_t*) data);
 			break;
 		case HID_ID_SMPLREP:
-			FfbHandle_SetDownloadForceSample(
-					(USB_FFBReport_SetDownloadForceSample_Output_Data_t*) data);
+//			FfbHandle_SetDownloadForceSample(
+//					(USB_FFBReport_SetDownloadForceSample_Output_Data_t*) data);
 			break;
 		case 9:
 			break;
@@ -334,18 +347,17 @@ void FfbReportHandler::FfbOnUsbData(uint8_t event_idx, uint8_t *data,
 		case HID_ID_CTRLREP:
 			FfbHandle_DeviceControl(
 					(USB_FFBReport_DeviceControl_Output_Data_t*) data);
-			sendStatusReport(effectId);
 			break;
 		case HID_ID_GAINREP:
 			FfbHandle_DeviceGain((USB_FFBReport_DeviceGain_Output_Data_Map_t*) data);
 			break;
 		case HID_ID_SETCREP:
-			FfbHandle_SetCustomForce(
-					(USB_FFBReport_SetCustomForce_Output_Data_t*) data);
+//			FfbHandle_SetCustomForce(
+//					(USB_FFBReport_SetCustomForce_Output_Data_t*) data);
 			break;
 		case HID_ID_NEWEFREP:
 			FfbOnCreateNewEffect(
-					(USB_FFBReport_CreateNewEffect_Feature_Data_t*) data);
+					(FFB_CreateNewEffect_Feature_Data_t*) data);
 			break;
 		default:
 			break;
@@ -374,10 +386,10 @@ int32_t FfbReportHandler::calculateEffects(int32_t pos, uint8_t axis = 1) {
 		if (effect->state != 2)
 			continue;
 
+		printf("calculating effect %d\n",effect->effectType);
 		switch (effect->effectType) {
 			case FFB_EFFECT_CONSTANT: {	// Constant force is just the force
-				int32_t f = ((int32_t) effect->magnitude * (int32_t) (1 + effect->gain))
-						/ 256;
+				int32_t f = ((int32_t) effect->magnitude * (int32_t) (1 + effect->gain));
 				// Optional filtering to reduce spikes
 //			if(cfFilter_f < calcfrequency/2){
 //				f = effect->filter->process(f);
@@ -390,16 +402,16 @@ int32_t FfbReportHandler::calculateEffects(int32_t pos, uint8_t axis = 1) {
 
 				int32_t force = 0;
 
-				if (abs(pos - effect->offset) > effect->deadBand) {
-					if (pos < effect->offset) { // Deadband side
+				if (abs(pos - effect->cpOffset) > effect->deadBand) {
+					if (pos < effect->cpOffset) { // Deadband side
 						force = clip<int32_t, int32_t>(
 								(effect->negativeCoefficient * scale
-										* (pos - (effect->offset - effect->deadBand))),
+										* (pos - (effect->cpOffset - effect->deadBand))),
 								-effect->negativeSaturation, effect->positiveSaturation);
 					} else {
 						force = clip<int32_t, int32_t>(
 								(effect->positiveCoefficient * scale
-										* (pos - (effect->offset + effect->deadBand))),
+										* (pos - (effect->cpOffset + effect->deadBand))),
 								-effect->negativeSaturation, effect->positiveSaturation);
 					}
 				}

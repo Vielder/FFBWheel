@@ -8,11 +8,15 @@
 #ifndef INC_FFBREPORTHANDLER_H_
 #define INC_FFBREPORTHANDLER_H_
 
+#ifdef __cplusplus
+
+
 #include "HIDReportType.h"
 #include "main.h"
 #include <chrono>
 #include <stdint.h>
 #include <cstring>
+#include "stm32f4xx_hal.h"
 
 
 class FfbReportHandler {
@@ -35,7 +39,7 @@ class FfbReportHandler {
     volatile USB_FFBReport_PIDStatus_Input_Data_t pidState = {2, 30, 0};
     volatile USB_FFBReport_PIDBlockLoad_Feature_Data_t pidBlockLoad;
     volatile USB_FFBReport_PIDPool_Feature_Data_t pidPoolReport;
-    volatile USB_FFBReport_DeviceGain_Output_Data_t deviceGain;
+    volatile USB_FFBReport_DeviceGain_Output_Data_Map_t deviceGain;
 
 
 
@@ -57,17 +61,17 @@ class FfbReportHandler {
     void FfbHandle_SetCustomForceData(USB_FFBReport_SetCustomForceData_Output_Data_t* data);
     void FfbHandle_SetDownloadForceSample(USB_FFBReport_SetDownloadForceSample_Output_Data_t* data);
     void FfbHandle_SetCustomForce(USB_FFBReport_SetCustomForce_Output_Data_t* data);
-    void FfbHandle_SetEffect(USB_FFBReport_SetEffect_Output_Data_t* data);
+    void FfbHandle_SetEffect(FFB_SetEffect_t* data);
     void SetEnvelope(USB_FFBReport_SetEnvelope_Output_Data_t* data, volatile TEffectState* effect);
-    void SetCondition(USB_FFBReport_SetCondition_Output_Data_t* data, volatile TEffectState* effect);
-    void SetPeriodic(USB_FFBReport_SetPeriodic_Output_Data_t* data, volatile TEffectState* effect);
-    void SetConstantForce(USB_FFBReport_SetConstantForce_Output_Data_t* data, volatile TEffectState* effect);
+    void SetCondition(FFB_SetCondition_Data_t* data, volatile TEffectState* effect);
+    void SetPeriodic(FFB_SetPeriodic_Data_t* data, volatile TEffectState* effect);
+    void SetConstantForce(FFB_SetConstantForce_Data_t* data, volatile TEffectState* effect);
     void SetRampForce(USB_FFBReport_SetRampForce_Output_Data_t* data, volatile TEffectState* effect);
 
     void sendStatusReport(uint8_t effect);
 
     // Handle incoming data from USB
-    void FfbOnCreateNewEffect(USB_FFBReport_CreateNewEffect_Feature_Data_t* inData);
+    void FfbOnCreateNewEffect(FFB_CreateNewEffect_Feature_Data_t* inData);
     void FfbOnUsbData(uint8_t event_idx, uint8_t* data, uint16_t len);
     uint8_t* FfbOnPIDPool();
     uint8_t* FfbOnPIDBlockLoad();
@@ -79,5 +83,6 @@ class FfbReportHandler {
 
 extern FfbReportHandler ffbReportHandler;
 
+#endif
 
 #endif /* INC_FFBREPORTHANDLER_H_ */
