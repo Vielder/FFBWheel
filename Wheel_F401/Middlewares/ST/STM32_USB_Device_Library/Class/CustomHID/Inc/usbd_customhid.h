@@ -1,48 +1,45 @@
 /**
-  ******************************************************************************
-  * @file    usbd_customhid.h
-  * @author  MCD Application Team
-  * @brief   header file for the usbd_customhid.c file.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2015 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    usbd_customhid.h
+ * @author  MCD Application Team
+ * @brief   header file for the usbd_customhid.c file.
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2015 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __USB_CUSTOMHID_H
 #define __USB_CUSTOMHID_H
-
-
 
 /* Includes ------------------------------------------------------------------*/
 #include  "usbd_ioreq.h"
 #include "FfbReportHandler.h"
 
 /** @addtogroup STM32_USB_DEVICE_LIBRARY
-  * @{
-  */
+ * @{
+ */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** @defgroup USBD_CUSTOM_HID
-  * @brief This file is the Header file for USBD_customhid.c
-  * @{
-  */
+	/** @defgroup USBD_CUSTOM_HID
+	 * @brief This file is the Header file for USBD_customhid.c
+	 * @{
+	 */
 
-
-/** @defgroup USBD_CUSTOM_HID_Exported_Defines
-  * @{
-  */
+	/** @defgroup USBD_CUSTOM_HID_Exported_Defines
+	 * @{
+	 */
 #ifndef CUSTOM_HID_EPIN_ADDR
 #define CUSTOM_HID_EPIN_ADDR                         0x81U
 #endif /* CUSTOM_HID_EPIN_ADDR */
@@ -91,97 +88,90 @@ extern "C" {
 #define CUSTOM_HID_REQ_GET_REPORT                    0x01U
 
 #define USBD_CUSTOMHID_CTRL_REQ_GET_REPORT_ENABLED	 0x01U
-/**
-  * @}
-  */
+	/**
+	 * @}
+	 */
 
+	/** @defgroup USBD_CORE_Exported_TypesDefinitions
+	 * @{
+	 */
+	typedef enum {
+		CUSTOM_HID_IDLE = 0U, CUSTOM_HID_BUSY,
+	} CUSTOM_HID_StateTypeDef;
 
-/** @defgroup USBD_CORE_Exported_TypesDefinitions
-  * @{
-  */
-typedef enum
-{
-  CUSTOM_HID_IDLE = 0U,
-  CUSTOM_HID_BUSY,
-} CUSTOM_HID_StateTypeDef;
+	typedef struct _USBD_CUSTOM_HID_Itf {
+		uint8_t *pReport;
+		int8_t (*Init)(void);
+		int8_t (*DeInit)(void);
+		int8_t (*OutEvent)(uint8_t event_idx, uint8_t *state);
+		int8_t (*GetEvent)(USBD_SetupReqTypedef*, uint8_t **return_buf); //feature get
+	} USBD_CUSTOM_HID_ItfTypeDef;
 
-typedef struct _USBD_CUSTOM_HID_Itf
-{
-  uint8_t *pReport;
-  int8_t (* Init)(void);
-  int8_t (* DeInit)(void);
-  int8_t (* OutEvent)(uint8_t event_idx, uint8_t* state);
-  int8_t (* GetEvent)      (USBD_SetupReqTypedef*,uint8_t** return_buf); //feature get
-} USBD_CUSTOM_HID_ItfTypeDef;
+	typedef struct {
+		uint8_t Report_buf[USBD_CUSTOMHID_OUTREPORT_BUF_SIZE];
+		uint32_t Protocol;
+		uint32_t IdleState;
+		uint32_t AltSetting;
+		uint32_t IsReportAvailable;
+		CUSTOM_HID_StateTypeDef state;
+	} USBD_CUSTOM_HID_HandleTypeDef;
 
-typedef struct
-{
-  uint8_t  Report_buf[USBD_CUSTOMHID_OUTREPORT_BUF_SIZE];
-  uint32_t Protocol;
-  uint32_t IdleState;
-  uint32_t AltSetting;
-  uint32_t IsReportAvailable;
-  CUSTOM_HID_StateTypeDef state;
-} USBD_CUSTOM_HID_HandleTypeDef;
+	/*
+	 * HID Class specification version 1.1
+	 * 6.2.1 HID Descriptor
+	 */
 
-/*
- * HID Class specification version 1.1
- * 6.2.1 HID Descriptor
- */
+	typedef struct
+	{
+		uint8_t bLength;
+		uint8_t bDescriptorTypeCHID;
+		uint16_t bcdCUSTOM_HID;
+		uint8_t bCountryCode;
+		uint8_t bNumDescriptors;
+		uint8_t bDescriptorType;
+		uint16_t wItemLength;
+	}__PACKED USBD_DescTypeDef;
 
-typedef struct
-{
-  uint8_t           bLength;
-  uint8_t           bDescriptorTypeCHID;
-  uint16_t          bcdCUSTOM_HID;
-  uint8_t           bCountryCode;
-  uint8_t           bNumDescriptors;
-  uint8_t           bDescriptorType;
-  uint16_t          wItemLength;
-} __PACKED USBD_DescTypeDef;
+	/**
+	 * @}
+	 */
 
-/**
-  * @}
-  */
+	/** @defgroup USBD_CORE_Exported_Macros
+	 * @{
+	 */
 
+	/**
+	 * @}
+	 */
 
+	/** @defgroup USBD_CORE_Exported_Variables
+	 * @{
+	 */
 
-/** @defgroup USBD_CORE_Exported_Macros
-  * @{
-  */
-
-/**
-  * @}
-  */
-
-/** @defgroup USBD_CORE_Exported_Variables
-  * @{
-  */
-
-extern USBD_ClassTypeDef USBD_CUSTOM_HID;
+	extern USBD_ClassTypeDef USBD_CUSTOM_HID;
 #define USBD_CUSTOM_HID_CLASS &USBD_CUSTOM_HID
-/**
-  * @}
-  */
+	/**
+	 * @}
+	 */
 
-/** @defgroup USB_CORE_Exported_Functions
-  * @{
-  */
+	/** @defgroup USB_CORE_Exported_Functions
+	 * @{
+	 */
 #ifdef USE_USBD_COMPOSITE
 uint8_t USBD_CUSTOM_HID_SendReport(USBD_HandleTypeDef *pdev,
                                    uint8_t *report, uint16_t len, uint8_t ClassId);
 #else
-uint8_t USBD_CUSTOM_HID_SendReport(USBD_HandleTypeDef *pdev,
-                                   uint8_t *report, uint16_t len);
+	uint8_t USBD_CUSTOM_HID_SendReport(USBD_HandleTypeDef *pdev, uint8_t *report,
+			uint16_t len);
 #endif /* USE_USBD_COMPOSITE */
-uint8_t USBD_CUSTOM_HID_ReceivePacket(USBD_HandleTypeDef *pdev);
+	uint8_t USBD_CUSTOM_HID_ReceivePacket(USBD_HandleTypeDef *pdev);
 
-uint8_t USBD_CUSTOM_HID_RegisterInterface(USBD_HandleTypeDef *pdev,
-                                          USBD_CUSTOM_HID_ItfTypeDef *fops);
+	uint8_t USBD_CUSTOM_HID_RegisterInterface(USBD_HandleTypeDef *pdev,
+			USBD_CUSTOM_HID_ItfTypeDef *fops);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #ifdef __cplusplus
 }
@@ -189,10 +179,10 @@ uint8_t USBD_CUSTOM_HID_RegisterInterface(USBD_HandleTypeDef *pdev,
 
 #endif  /* __USB_CUSTOMHID_H */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 

@@ -33,9 +33,11 @@ template<class T, class C>
 int8_t cliptest(T v, C l, C h) {
 	if (v > h) {
 		return 1;
-	} else if (v < l) {
+	}
+	else if (v < l) {
 		return -1;
-	} else {
+	}
+	else {
 		return 0;
 	}
 }

@@ -1,21 +1,21 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.h
-  * @brief          : Header for main.c file.
-  *                   This file contains the common defines of the application.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2024 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.h
+ * @brief          : Header for main.c file.
+ *                   This file contains the common defines of the application.
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2024 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
@@ -26,47 +26,48 @@
 extern "C" {
 #endif
 
-/* Includes ------------------------------------------------------------------*/
+	/* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
+	/* Private includes ----------------------------------------------------------*/
+	/* USER CODE BEGIN Includes */
+#include "HIDReportType.h"
 #include "FfbReportHandlerWrapper.h"
-/* USER CODE END Includes */
+	/* USER CODE END Includes */
 
-/* Exported types ------------------------------------------------------------*/
-/* USER CODE BEGIN ET */
+	/* Exported types ------------------------------------------------------------*/
+	/* USER CODE BEGIN ET */
 
-/* USER CODE END ET */
+	/* USER CODE END ET */
 
-/* Exported constants --------------------------------------------------------*/
-/* USER CODE BEGIN EC */
+	/* Exported constants --------------------------------------------------------*/
+	/* USER CODE BEGIN EC */
 
-/* USER CODE END EC */
+	/* USER CODE END EC */
 
-/* Exported macro ------------------------------------------------------------*/
-/* USER CODE BEGIN EM */
+	/* Exported macro ------------------------------------------------------------*/
+	/* USER CODE BEGIN EM */
 
-/* USER CODE END EM */
+	/* USER CODE END EM */
 
-void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+	void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
-/* Exported functions prototypes ---------------------------------------------*/
-void Error_Handler(void);
+	/* Exported functions prototypes ---------------------------------------------*/
+	void Error_Handler(void);
 
-/* USER CODE BEGIN EFP */
+	/* USER CODE BEGIN EFP */
 
-/* USER CODE END EFP */
+	/* USER CODE END EFP */
 
-/* Private defines -----------------------------------------------------------*/
+	/* Private defines -----------------------------------------------------------*/
 
-/* USER CODE BEGIN Private defines */
-typedef struct {
-	uint8_t reportId;
-	uint8_t data[64];
-} OutReportData;
+	/* USER CODE BEGIN Private defines */
+	typedef struct {
+		uint8_t reportId;
+		uint8_t data[64];
+	} OutReportData;
 
-typedef struct {
+	typedef struct {
 		uint8_t id;
 		uint32_t buttons;
 		int16_t X;
@@ -77,7 +78,7 @@ typedef struct {
 		int16_t RZ;
 		int16_t Dial;
 		int16_t Slider;
-} reportHID_t;
+	} reportHID_t;
 
 #define PWM_Pin GPIO_PIN_8
 #define PWM_GPIO_Port GPIOA
@@ -85,6 +86,7 @@ typedef struct {
 #define R_EN_GPIO_Port GPIOB
 #define L_EN_Pin GPIO_PIN_8
 #define L_EN_GPIO_Port GPIOB
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
