@@ -32,6 +32,12 @@
 extern "C" {
 #endif
 
+
+#define TU_U16_HIGH(_u16)     ((uint8_t) (((_u16) >> 8) & 0x00ff))
+#define TU_U16_LOW(_u16)      ((uint8_t) ((_u16)       & 0x00ff))
+
+static inline uint8_t tu_u16_high(uint16_t ui16) { return TU_U16_HIGH(ui16); }
+static inline uint8_t tu_u16_low (uint16_t ui16) { return TU_U16_LOW(ui16); }
 	/** @defgroup USBD_CUSTOM_HID
 	 * @brief This file is the Header file for USBD_customhid.c
 	 * @{
@@ -53,7 +59,7 @@ extern "C" {
 #endif /* CUSTOM_HID_EPOUT_ADDR */
 
 #ifndef CUSTOM_HID_EPOUT_SIZE
-#define CUSTOM_HID_EPOUT_SIZE                        0x02U
+#define CUSTOM_HID_EPOUT_SIZE                        0x16U
 #endif /* CUSTOM_HID_EPOUT_SIZE*/
 
 #define USB_CUSTOM_HID_CONFIG_DESC_SIZ               41U

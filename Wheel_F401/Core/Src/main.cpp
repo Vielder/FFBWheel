@@ -78,7 +78,7 @@ volatile uint16_t adcResultsDMA[3];
 const int adcChannelCount = sizeof(adcResultsDMA) / sizeof(adcResultsDMA[0]);
 volatile int adcConversionComplete = 0; // set by callback
 
-uint8_t fx_ratio_i = 80; // Reduce effects to a certain ratio of the total power to have a margin for the endstop
+uint8_t fx_ratio_i = 255; // Reduce effects to a certain ratio of the total power to have a margin for the endstop
 int32_t torque = 0; // last torque
 int32_t effectTorque = 0; // last torque
 int32_t lastEnc = 0;
@@ -123,7 +123,7 @@ int16_t updateEndstop() {
 	addtorque *= -clipdir;
 	addtorqueTest = addtorque;
 
-	return clip<int32_t, int32_t>(addtorque, -700, 700);
+	return clip<int32_t, int32_t>(addtorque, -MAX_TORQUE*0.3, MAX_TORQUE*0.3);
 }
 
 void printEffectState(TEffectState *state) {
@@ -388,7 +388,7 @@ static void MX_TIM3_Init(void) {
 	htim3.Instance = TIM3;
 	htim3.Init.Prescaler = 0;
 	htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim3.Init.Period = 1919;
+	htim3.Init.Period = 59999;
 	htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 	if (HAL_TIM_Base_Init(&htim3) != HAL_OK) {
@@ -521,7 +521,7 @@ void StartDefaultTask(void *argument) {
 				HAL_GPIO_WritePin(R_EN_GPIO_Port, R_EN_Pin, GPIO_PIN_SET); // Установка R_EN на высокий уровень
 				HAL_GPIO_WritePin(L_EN_GPIO_Port, L_EN_Pin, GPIO_PIN_RESET); // Установка L_EN на низкий уровень
 			}
-			int32_t val = (uint32_t) abs(torque) + 600;
+			int32_t val = (uint32_t) abs(torque);
 			torqueTest = torque;
 			printf("\tTorque = %ld", torque);
 

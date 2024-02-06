@@ -340,6 +340,10 @@ static uint8_t USBD_CUSTOM_HID_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqType
 
 	switch (req->bmRequest & USB_REQ_TYPE_MASK) {
 		case USB_REQ_TYPE_CLASS:
+			uint8_t report_type = tu_u16_high(req->wValue);
+			uint8_t report_id   = tu_u16_low(req->wValue);
+
+			printf("Type: %d, ID: %d;\n", report_type, report_id);
 			switch (req->bRequest) {
 				case CUSTOM_HID_REQ_SET_PROTOCOL:
 					hhid->Protocol = (uint8_t) (req->wValue);
@@ -359,11 +363,14 @@ static uint8_t USBD_CUSTOM_HID_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqType
 
 				case CUSTOM_HID_REQ_SET_REPORT:
 
+//					printf("Set{ Type: %d, ID: %d;}\n", report_type, report_id);
+
 					hhid->IsReportAvailable = 1U;
 					(void) USBD_CtlPrepareRx(pdev, hhid->Report_buf, req->wLength);
 					break;
 
 				case CUSTOM_HID_REQ_GET_REPORT:
+//					printf("Get{ Type: %d, ID: %d;}\n", report_type, report_id);
 					get_feature_return_buf = 0;
 					((USBD_CUSTOM_HID_ItfTypeDef*) pdev->pUserData[pdev->classId])->GetEvent(req, &get_feature_return_buf);
 					// user must set return buffer in callback now

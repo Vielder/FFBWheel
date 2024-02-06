@@ -27,8 +27,7 @@ FfbReportHandler::~FfbReportHandler() {
 
 uint8_t FfbReportHandler::GetNextFreeEffect(uint8_t effectType) {
 	for (uint8_t i = 0; i < MAX_EFFECTS; i++) {
-		if (gEffectStates[i].effectType == FFB_EFFECT_NONE
-				|| gEffectStates[i].effectType == effectType) {
+		if (gEffectStates[i].effectType == FFB_EFFECT_NONE || gEffectStates[i].effectType == effectType) {
 			return (i + 1);
 		}
 	}
@@ -175,10 +174,7 @@ void FfbReportHandler::FfbHandle_SetEffect(FFB_SetEffect_t *data) {
 		effect->counter = 0;
 		effect->last_value = 0;
 	}
-	printf(
-			"Setting effect parameters{duration: %d\tdirectionX: %d\tdirectionY: %d\tEffectType:%d\tgain: %d\tperiod: %d\tenableAxis: %d\t}\n",
-			effect->duration, effect->directionX, effect->directionY,
-			effect->effectType, effect->gain, effect->period, effect->enableAxis);
+	printf("Setting effect parameters{duration: %d\tdirectionX: %d\tdirectionY: %d\tEffectType:%d\tgain: %d\tperiod: %d\tenableAxis: %d\t}\n", effect->duration, effect->directionX, effect->directionY, effect->effectType, effect->gain, effect->period, effect->enableAxis);
 }
 
 void FfbReportHandler::SetEnvelope(USB_FFBReport_SetEnvelope_Output_Data_t *data, volatile TEffectState *effect) {
@@ -199,11 +195,7 @@ void FfbReportHandler::SetCondition(FFB_SetCondition_Data_t *data, volatile TEff
 	effect->positiveSaturation = data->positiveSaturation;
 	effect->negativeSaturation = data->negativeSaturation;
 	effect->deadBand = data->deadBand;
-	printf(
-			"Setting condition with{ParamBlockOffset: %d\tcpOffset: %d\tposCoef: %d\tnegCoef: %d\tposSat: %d\tnegSat: %d\tdeadBand: %d\t}\n",
-			data->parameterBlockOffset, effect->cpOffset, effect->positiveCoefficient,
-			effect->negativeCoefficient, effect->positiveSaturation,
-			effect->negativeSaturation, effect->deadBand);
+	printf("Setting condition with{ParamBlockOffset: %d\tcpOffset: %d\tposCoef: %d\tnegCoef: %d\tposSat: %d\tnegSat: %d\tdeadBand: %d\t}\n", data->parameterBlockOffset, effect->cpOffset, effect->positiveCoefficient, effect->negativeCoefficient, effect->positiveSaturation, effect->negativeSaturation, effect->deadBand);
 }
 
 void FfbReportHandler::SetPeriodic(FFB_SetPeriodic_Data_t *data, volatile TEffectState *effect) {
@@ -251,25 +243,18 @@ uint8_t* FfbReportHandler::FfbOnPIDPool() {
 	pidPoolReport.ramPoolSize = MEMORY_SIZE;
 	pidPoolReport.maxSimultaneousEffects = MAX_EFFECTS;
 	pidPoolReport.memoryManagement = 3;
-	printf(
-			"Sending PIDPool:\n\tID:%d;\n\tRamPool:%d\n\tMaxEffects:%d\n\tMemoryMng:%d\n",
-			pidPoolReport.reportId, pidPoolReport.ramPoolSize,
-			pidPoolReport.maxSimultaneousEffects, pidPoolReport.memoryManagement);
+	printf("Sending PIDPool:\n\tID:%d;\n\tRamPool:%d\n\tMaxEffects:%d\n\tMemoryMng:%d\n", pidPoolReport.reportId, pidPoolReport.ramPoolSize, pidPoolReport.maxSimultaneousEffects, pidPoolReport.memoryManagement);
 	return (uint8_t*) &pidPoolReport;
 }
 
 uint8_t* FfbReportHandler::FfbOnPIDBlockLoad() {
-	printf(
-			"Sending PIDBlock:\n\tID:%d;\n\tEffectBlockIndex:%d\n\tLoadStatus:%d\n\tRamAvaliable:%d\n",
-			pidBlockLoad.reportId, pidBlockLoad.effectBlockIndex,
-			pidBlockLoad.loadStatus, pidBlockLoad.ramPoolAvailable);
+	printf("Sending PIDBlock:\n\tID:%d;\n\tEffectBlockIndex:%d\n\tLoadStatus:%d\n\tRamAvaliable:%d\n", pidBlockLoad.reportId, pidBlockLoad.effectBlockIndex, pidBlockLoad.loadStatus, pidBlockLoad.ramPoolAvailable);
 	return (uint8_t*) &pidBlockLoad;
 
 }
 
 uint8_t* FfbReportHandler::FfbOnPIDStatus() {
-	printf("Sending status:\n\tID:%d;\n\tStatus:%d\n\tEffectBlockIndex:%d\n",
-			pidState.reportId, pidState.status, pidState.effectBlockIndex);
+	printf("Sending status:\n\tID:%d;\n\tStatus:%d\n\tEffectBlockIndex:%d\n", pidState.reportId, pidState.status, pidState.effectBlockIndex);
 	return (uint8_t*) &pidState;
 }
 
@@ -289,8 +274,7 @@ void FfbReportHandler::sendStatusReport(uint8_t effect) {
 	if (effect > 0 && gEffectStates[effect - 1].state == 1)
 		pidState.status |= HID_EFFECT_PLAYING;
 	printf("Status: %d\n", pidState.status);
-	USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*) &pidState,
-			sizeof(USB_FFBReport_PIDStatus_Input_Data_t));
+	USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*) &pidState, sizeof(USB_FFBReport_PIDStatus_Input_Data_t));
 }
 
 void FfbReportHandler::FfbOnUsbData(uint8_t event_idx, uint8_t *data, uint16_t len) {
@@ -311,8 +295,7 @@ void FfbReportHandler::FfbOnUsbData(uint8_t event_idx, uint8_t *data, uint16_t l
 			FfbHandle_SetEffect((FFB_SetEffect_t*) data);
 			break;
 		case HID_ID_ENVREP:
-			SetEnvelope((USB_FFBReport_SetEnvelope_Output_Data_t*) data,
-					&gEffectStates[effectId]);
+			SetEnvelope((USB_FFBReport_SetEnvelope_Output_Data_t*) data, &gEffectStates[effectId]);
 			break;
 		case HID_ID_CONDREP:
 			SetCondition((FFB_SetCondition_Data_t*) data, &gEffectStates[effectId]);
@@ -321,8 +304,7 @@ void FfbReportHandler::FfbOnUsbData(uint8_t event_idx, uint8_t *data, uint16_t l
 			SetPeriodic((FFB_SetPeriodic_Data_t*) data, &gEffectStates[effectId]);
 			break;
 		case HID_ID_CONSTREP:
-			SetConstantForce((FFB_SetConstantForce_Data_t*) data,
-					&gEffectStates[effectId]);
+			SetConstantForce((FFB_SetConstantForce_Data_t*) data, &gEffectStates[effectId]);
 			break;
 		case HID_ID_RAMPREP:
 //			SetRampForce((USB_FFBReport_SetRampForce_Output_Data_t*) data,
@@ -339,15 +321,13 @@ void FfbReportHandler::FfbOnUsbData(uint8_t event_idx, uint8_t *data, uint16_t l
 		case 9:
 			break;
 		case HID_ID_EFOPREP:
-			FfbHandle_EffectOperation(
-					(USB_FFBReport_EffectOperation_Output_Data_t*) data);
+			FfbHandle_EffectOperation((USB_FFBReport_EffectOperation_Output_Data_t*) data);
 			break;
 		case HID_ID_BLKFRREP:
 			FfbHandle_BlockFree((USB_FFBReport_BlockFree_Output_Data_t*) data);
 			break;
 		case HID_ID_CTRLREP:
-			FfbHandle_DeviceControl(
-					(USB_FFBReport_DeviceControl_Output_Data_t*) data);
+			FfbHandle_DeviceControl((USB_FFBReport_DeviceControl_Output_Data_t*) data);
 			break;
 		case HID_ID_GAINREP:
 			FfbHandle_DeviceGain((USB_FFBReport_DeviceGain_Output_Data_Map_t*) data);
@@ -407,16 +387,10 @@ int32_t FfbReportHandler::calculateEffects(int32_t pos, uint8_t axis = 1) {
 
 				if (abs(pos - effect->cpOffset) > effect->deadBand) {
 					if (pos < effect->cpOffset) { // Deadband side
-						force = clip<int32_t, int32_t>(
-								(effect->negativeCoefficient * scale
-										* (pos - (effect->cpOffset - effect->deadBand))),
-								-effect->negativeSaturation, effect->positiveSaturation);
+						force = clip<int32_t, int32_t>((effect->negativeCoefficient * scale * (pos - (effect->cpOffset - effect->deadBand))), -effect->negativeSaturation, effect->positiveSaturation);
 					}
 					else {
-						force = clip<int32_t, int32_t>(
-								(effect->positiveCoefficient * scale
-										* (pos - (effect->cpOffset + effect->deadBand))),
-								-effect->negativeSaturation, effect->positiveSaturation);
+						force = clip<int32_t, int32_t>((effect->positiveCoefficient * scale * (pos - (effect->cpOffset + effect->deadBand))), -effect->negativeSaturation, effect->positiveSaturation);
 					}
 				}
 
@@ -427,20 +401,16 @@ int32_t FfbReportHandler::calculateEffects(int32_t pos, uint8_t axis = 1) {
 			case FFB_EFFECT_SQUARE: {
 
 				int32_t force =
-						((effect->counter + effect->phase) % ((uint32_t) effect->period + 2))
-								< (uint32_t) (effect->period + 2) / 2 ?
-								-effect->magnitude : effect->magnitude;
+						((effect->counter + effect->phase) % ((uint32_t) effect->period + 2)) < (uint32_t) (effect->period + 2) / 2 ? -effect->magnitude : effect->magnitude;
 				force += effect->offset;
 				result_torque -= force;
 				break;
 			}
 			case FFB_EFFECT_SINE: {
 				uint16_t t = effect->counter;
-				float freq = 1.0f
-						/ (float) (max<uint16_t>(uint16_t(effect->period), 2));
+				float freq = 1.0f / (float) (max<uint16_t>(uint16_t(effect->period), 2));
 				float phase = (float) effect->phase / (float) 35999; //degrees
-				float sine = sinf(2.0 * (float) M_PI * (t * freq + phase))
-						* effect->magnitude;
+				float sine = sinf(2.0 * (float) M_PI * (t * freq + phase)) * effect->magnitude;
 				int32_t force = (int32_t) (effect->offset + sine);
 
 				result_torque -= force;
@@ -469,9 +439,7 @@ int32_t FfbReportHandler::calculateEffects(int32_t pos, uint8_t axis = 1) {
 					break;
 				}
 				// Calculate force
-				force = clip<int32_t, int32_t>(
-						(int32_t) ((effect->positiveCoefficient)),
-						-effect->negativeSaturation, effect->positiveSaturation);
+				force = clip<int32_t, int32_t>((int32_t) ((effect->positiveCoefficient)), -effect->negativeSaturation, effect->positiveSaturation);
 				force = (frictionscale * force) / 1919;
 				result_torque -= force;
 				break;
@@ -488,5 +456,5 @@ int32_t FfbReportHandler::calculateEffects(int32_t pos, uint8_t axis = 1) {
 	}
 	result_torque = (result_torque * (gain + 1)); // Apply global gain
 
-	return clip(result_torque, -1919, 1919);
+	return clip(result_torque, -59999, 59999);
 }
