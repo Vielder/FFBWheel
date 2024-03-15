@@ -10,6 +10,7 @@
 #include "FfbWheel.h"
 #include "math.h"
 #include "helpers.h"
+#include "globals.h"
 #include "usbd_customhid.h"
 
 FfbReportHandler::FfbReportHandler() {
@@ -350,16 +351,6 @@ TEffectState* FfbReportHandler::getEffectData(uint8_t id) {
 }
 
 int32_t FfbReportHandler::calculateEffects(int32_t pos, uint8_t axis = 1) {
-//	if(!ffb_active){
-//		// Center when FFB is turned of with a spring effect
-//		if(idlecenter){
-//			int16_t idlespringclip = clip<int32_t,int32_t>((int32_t)idlespringstregth*50,0,10000);
-//			float idlespringscale = 0.5f + ((float)idlespringstregth * 0.01f);
-//			return clip<int32_t,int32_t>((int32_t)(-pos*idlespringscale),-idlespringclip,idlespringclip);
-//		}else{
-//			return 0;
-//		}
-//	}
 
 	int32_t result_torque = 0;
 
@@ -372,11 +363,7 @@ int32_t FfbReportHandler::calculateEffects(int32_t pos, uint8_t axis = 1) {
 //		printf("calculating effect %d\n", effect->effectType);
 		switch (effect->effectType) {
 			case FFB_EFFECT_CONSTANT: {	// Constant force is just the force
-				int32_t f = ((int32_t) effect->magnitude * (int32_t) (1 + effect->gain));
-				// Optional filtering to reduce spikes
-//			if(cfFilter_f < calcfrequency/2){
-//				f = effect->filter->process(f);
-//			}
+				int32_t f = ((int32_t) effect->magnitude);
 				result_torque -= f;
 				break;
 			}
@@ -429,10 +416,8 @@ int32_t FfbReportHandler::calculateEffects(int32_t pos, uint8_t axis = 1) {
 					effect->last_value = pos;
 					break;
 				}
-//				int32_t speed = pos - effect->last_value;
+				int32_t speed = pos - effect->last_value;
 				effect->last_value = pos;
-
-//				float val = effect->filter->process(speed) * 0.035f; // TODO tune friction
 
 				// Only active outside deadband. Process filter always!
 				if (abs(pos - effect->offset) < effect->deadBand) {
@@ -440,7 +425,7 @@ int32_t FfbReportHandler::calculateEffects(int32_t pos, uint8_t axis = 1) {
 				}
 				// Calculate force
 				force = clip<int32_t, int32_t>((int32_t) ((effect->positiveCoefficient)), -effect->negativeSaturation, effect->positiveSaturation);
-				force = (frictionscale * force) / 1919;
+				force = (frictionscale * force) / MAX_TORQUE;
 				result_torque -= force;
 				break;
 			}
@@ -456,5 +441,5 @@ int32_t FfbReportHandler::calculateEffects(int32_t pos, uint8_t axis = 1) {
 	}
 	result_torque = (result_torque * (gain + 1)); // Apply global gain
 
-	return clip(result_torque, -59999, 59999);
+	return clip(result_torque, -MAX_TORQUE, MAX_TORQUE);
 }
