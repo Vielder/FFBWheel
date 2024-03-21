@@ -92,13 +92,13 @@ const osThreadAttr_t task05_attributes = {
 };
 /* USER CODE BEGIN PV */
 
-reportHID_t reportHID = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+reportHID_t reportHID = { 1, 0, 0, 0, 0, 0, 0, 0};
 
 volatile uint16_t adcResultsDMA[3];
 const int adcChannelCount = sizeof(adcResultsDMA) / sizeof(adcResultsDMA[0]);
 volatile int adcConversionComplete = 0; // set by callback
 
-uint8_t fx_ratio_i = 25; // Reduce effects to a certain ratio of the total power to have a margin for the endstop
+uint8_t fx_ratio_i = 60; // Reduce effects to a certain ratio of the total power to have a margin for the endstop
 int32_t torque = 0; // last torque
 int32_t effectTorque = 0; // last torque
 int32_t lastEnc = 0;
@@ -112,6 +112,7 @@ int32_t addtorqueTest;
 int32_t endstopTorqueTest;
 
 int32_t adc[3];
+int16_t offset = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -343,13 +344,13 @@ static void MX_ADC1_Init(void)
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ScanConvMode = ENABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.NbrOfConversion = 3;
   hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -361,7 +362,25 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_5;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_56CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_6;
+  sConfig.Rank = 2;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_7;
+  sConfig.Rank = 3;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -428,7 +447,7 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 0;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 29999;
+  htim3.Init.Period = 3999;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -504,6 +523,12 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin : PB0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
   /*Configure GPIO pins : PB8 PB9 */
   GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -557,6 +582,7 @@ void StartDefaultTask(void *argument)
 		// Calculate total torque
 		torque += effectTorque;
 		torque += endstopTorque;
+		torqueTest = torque;
 
 		// Torque changed
 		if (torque != lastTorque) {
@@ -585,7 +611,7 @@ void StartDefaultTask(void *argument)
 				__HAL_TIM_SET_COMPARE(&htim3, L_PWM_CH, MAX_TORQUE);
 				__HAL_TIM_SET_COMPARE(&htim3, R_PWM_CH, MAX_TORQUE);
 			}
-			torqueTest = torque;
+
 //			printf("\tTorque = %ld", torque);
 		}
 
@@ -643,11 +669,12 @@ void StartTask02(void *argument)
 		else if (temp > 2596 && temp <= 4096 && prevPos >= 0 && prevPos <= 1596) {
 			rdCnt--;
 		}
-		if (temp + 4096 * rdCnt < reportHID.X + 2 && temp + 4096 * rdCnt > reportHID.X - 2) {
+		if (temp + 4096 * rdCnt < reportHID.X + 2 && temp + 4096 * rdCnt > reportHID.X - 3) {
 			// Do nothing
 		}
 		else {
 			reportHID.X = -(temp + rdCnt * 4096);
+			reportHID.X -= offset;
 		}
 		prevPos = temp;
 		debug = temp;
@@ -699,19 +726,19 @@ void StartTask04(void *argument)
 				&& adcResultsDMA[0] > reportHID.Z - 20) {
 			// Do nothing
 		} else {
-			reportHID.Z = adcResultsDMA[0];
+			reportHID.Z = adcResultsDMA[0] - 1300;
 		}
 		if (adcResultsDMA[1] < reportHID.RX + 20
 				&& adcResultsDMA[1] > reportHID.RX - 20) {
 			// Do nothing
 		} else {
-			reportHID.RX = adcResultsDMA[1];
+			reportHID.RX = adcResultsDMA[1] -2600;
 		}
 		if (adcResultsDMA[2] < reportHID.RY + 20
 				&& adcResultsDMA[2] > reportHID.RY - 20) {
 			// Do nothing
 		} else {
-			reportHID.RY = adcResultsDMA[2];
+			reportHID.RY = adcResultsDMA[2] - 1300;
 		}
 
 		osDelay(1);
@@ -731,6 +758,11 @@ void StartTask05(void *argument)
   /* USER CODE BEGIN StartTask05 */
 	/* Infinite loop */
 	for (;;) {
+
+		if(HAL_GPIO_ReadPin (GPIOB, GPIO_PIN_0)){
+			offset += reportHID.X;
+		}
+
 		osDelay(1);
 	}
   /* USER CODE END StartTask05 */

@@ -175,7 +175,7 @@ typedef struct { // FFB: Set EffectOperation Output Report
 } __attribute__((packed)) USB_FFBReport_EffectOperation_Output_Data_t;
 
 typedef struct { // FFB: Block Free Output Report
-//  uint8_t	reportId;	// =11
+  uint8_t	reportId;	// =11
 	uint8_t effectBlockIndex;	// 1..40
 } __attribute__((packed)) USB_FFBReport_BlockFree_Output_Data_t;
 
@@ -185,7 +185,7 @@ typedef struct { // FFB: Device Control Output Report
 } __attribute__((packed)) USB_FFBReport_DeviceControl_Output_Data_t;
 
 typedef struct { // FFB: Set Custom Force Output Report
-//  uint8_t		reportId;	// =14
+  uint8_t		reportId;	// =14
 	uint8_t effectBlockIndex;	// 1..40
 	uint8_t sampleCount;
 	uint16_t samplePeriod;	// 0..32767 ms

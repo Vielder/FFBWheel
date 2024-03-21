@@ -69,15 +69,13 @@ void Error_Handler(void);
 
 	typedef struct {
 		uint8_t id;
-		uint32_t buttons;
-		int16_t X;
-		int16_t Y;
-		int16_t Z;
+		unsigned int buttons : 4;
 		int16_t RX;
 		int16_t RY;
 		int16_t RZ;
-		int16_t Dial;
-		int16_t Slider;
+		int16_t X;
+		int16_t Y;
+		int16_t Z;
 	} reportHID_t;
 
 #define L_PWM_CH TIM_CHANNEL_1
