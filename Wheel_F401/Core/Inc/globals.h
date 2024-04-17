@@ -10,6 +10,6 @@
 
 extern uint8_t receivedData[USBD_CUSTOMHID_OUTREPORT_BUF_SIZE];
 
-#define MAX_TORQUE 1999
+#define MAX_TORQUE 8570
 
 #endif /* INC_GLOBALS_H_ */

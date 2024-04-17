@@ -98,7 +98,7 @@ volatile uint16_t adcResultsDMA[3];
 const int adcChannelCount = sizeof(adcResultsDMA) / sizeof(adcResultsDMA[0]);
 volatile int adcConversionComplete = 0; // set by callback
 
-uint8_t fx_ratio_i = 60; // Reduce effects to a certain ratio of the total power to have a margin for the endstop
+uint8_t fx_ratio_i = 30; // Reduce effects to a certain ratio of the total power to have a margin for the endstop
 int32_t torque = 0; // last torque
 int32_t effectTorque = 0; // last torque
 int32_t lastEnc = 0;
@@ -181,6 +181,7 @@ void printEffectState(TEffectState *state) {
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
   /* USER CODE END 1 */
 
@@ -266,6 +267,7 @@ int main(void)
   osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	while (1) {
@@ -447,7 +449,7 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 0;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 3999;
+  htim3.Init.Period = 8570;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -673,7 +675,7 @@ void StartTask02(void *argument)
 			// Do nothing
 		}
 		else {
-			reportHID.X = -(temp + rdCnt * 4096);
+			reportHID.X = ((-(temp + rdCnt * 4096))+reportHID.X)/2;
 			reportHID.X -= offset;
 		}
 		prevPos = temp;
