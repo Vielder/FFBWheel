@@ -331,7 +331,7 @@ void FfbReportHandler::FfbOnUsbData(uint8_t event_idx, uint8_t *data, uint16_t l
 			FfbHandle_DeviceControl((USB_FFBReport_DeviceControl_Output_Data_t*) data);
 			break;
 		case HID_ID_GAINREP:
-			FfbHandle_DeviceGain((USB_FFBReport_DeviceGain_Output_Data_Map_t*) data);
+//			FfbHandle_DeviceGain((USB_FFBReport_DeviceGain_Output_Data_Map_t*) data);
 			break;
 		case HID_ID_SETCREP:
 //			FfbHandle_SetCustomForce(

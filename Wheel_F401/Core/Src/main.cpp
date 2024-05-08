@@ -638,7 +638,8 @@ void StartTask02(void *argument)
   /* USER CODE BEGIN StartTask02 */
 	HAL_StatusTypeDef ret;
 	uint8_t raw[2] = { 0, 0 };
-	int16_t prevPos = 0;
+	int16_t prePreRelPos = 0;
+	int16_t prevAbsPos = 0;
 	int16_t temp;
 	int rdCnt = 0;
 
@@ -651,7 +652,8 @@ void StartTask02(void *argument)
 	ret = HAL_I2C_Master_Receive(&hi2c1, H_ADDR, raw, 2, HAL_MAX_DELAY);
 	if (ret != HAL_OK) {
 	}
-	prevPos = raw[1] | (raw[0] << 8);
+	prevAbsPos = raw[1] | (raw[0] << 8);
+	prePreRelPos = prevAbsPos;
 
 	/* Infinite loop */
 	for (;;) {
@@ -665,20 +667,20 @@ void StartTask02(void *argument)
 		}
 		temp = raw[1] | (raw[0] << 8);
 
-		if (prevPos > 2596 && prevPos <= 4096 && temp >= 0 && temp <= 1596) {
+		if (prevAbsPos > 2596 && prevAbsPos <= 4096 && temp >= 0 && temp <= 1596) {
 			rdCnt++;
 		}
-		else if (temp > 2596 && temp <= 4096 && prevPos >= 0 && prevPos <= 1596) {
+		else if (temp > 2596 && temp <= 4096 && prevAbsPos >= 0 && prevAbsPos <= 1596) {
 			rdCnt--;
 		}
 		if (temp + 4096 * rdCnt < reportHID.X + 2 && temp + 4096 * rdCnt > reportHID.X - 3) {
 			// Do nothing
 		}
 		else {
-			reportHID.X = ((-(temp + rdCnt * 4096))+reportHID.X)/2;
+			reportHID.X = (-(temp + rdCnt * 4096));
 			reportHID.X -= offset;
 		}
-		prevPos = temp;
+		prevAbsPos = temp;
 		debug = temp;
 
 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
